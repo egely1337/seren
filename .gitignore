@@ -1,0 +1,4 @@
+/build
+*.o
+*.d
+/limine_files
