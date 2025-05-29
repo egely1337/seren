@@ -2,3 +2,5 @@
 *.o
 *.d
 /limine_files
+.vscode
+.DS_Store

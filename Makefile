@@ -14,6 +14,8 @@ BUILD_DIR = $(ROOT_DIR)/build
 OBJ_DIR = $(BUILD_DIR)/obj
 DIST_DIR = $(BUILD_DIR)/dist
 ISO_ROOT_DIR = $(DIST_DIR)/iso_root
+FONT_PSF_SRC = $(ROOT_DIR)/resources/font.psf
+FONT_PSF_OBJ = $(OBJ_DIR)/font.o
 
 ASM_SOURCES = $(wildcard $(ARCH_DIR)/*/*/*.s) $(wildcard $(ARCH_DIR)/*/*/*/*.S)
 
@@ -26,7 +28,7 @@ C_SOURCES = $(C_SOURCES_NUCLEUS) $(C_SOURCES_ARCH)
 
 ASM_OBJECTS = $(patsubst $(ROOT_DIR)/%.s,$(OBJ_DIR)/%.o,$(ASM_SOURCES))
 C_OBJECTS   = $(patsubst $(ROOT_DIR)/%.c,$(OBJ_DIR)/%.o,$(C_SOURCES))
-OBJECTS     = $(ASM_OBJECTS) $(C_OBJECTS)
+OBJECTS     = $(ASM_OBJECTS) $(C_OBJECTS) $(FONT_PSF_OBJ)
 DEPS        = $(C_OBJECTS:.o=.d)
 
 KERNEL_ELF = $(BUILD_DIR)/nucleus.elf
@@ -39,7 +41,8 @@ INCLUDES = -I$(INCLUDE_DIR) \
 
 CFLAGS = -std=c11 $(INCLUDES) -Wall -Wextra -Werror -pedantic -O2 -g \
 	-ffreestanding -fno-stack-protector -fno-pie \
-	-mno-red-zone -MMD -MP
+	-mno-red-zone -MMD -MP \
+	-mcmodel=kernel
 
 ASFLAGS = -f elf64 -g
 
@@ -52,7 +55,7 @@ ESSENTIAL_LIMINE_FILES = \
 	$(LIMINE_BIOS_SYS_SRC) \
 	$(LIMINE_BIOS_CD_SRC)
 
-.PHONY: all clean iso run
+.PHONY: all clean iso run $(FONT_PSF_OBJ)
 
 all: $(KERNEL_ELF)
 
@@ -68,6 +71,9 @@ $(OBJ_DIR)/%.o: $(ROOT_DIR)/%.c Makefile $(wildcard $(dir $<)*.h) $(wildcard $(I
 
 $(OBJ_DIR)/%.o: $(ROOT_DIR)/%.s Makefile | directories
 	$(AS) $(ASFLAGS) $< -o $@
+
+$(FONT_PSF_OBJ): $(FONT_PSF_SRC) | directories
+	$(OBJCOPY) -I binary -O elf64-x86-64 $< $@
 
 clean:
 	rm -rf $(BUILD_DIR) $(DIST_DIR)
