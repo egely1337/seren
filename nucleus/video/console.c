@@ -2,6 +2,8 @@
 #include "psf.h"
 #include <limine.h>
 
+#define CONSOLE_READY (console_initialized && fb && fb->address)
+
 extern volatile struct limine_framebuffer_request framebuffer_request;
 
 static struct limine_framebuffer *fb = NULL;
@@ -12,13 +14,14 @@ static uint32_t current_bg_color = CONSOLE_DEFAULT_BG_COLOR;
 
 static uint32_t char_width = 0;
 static uint32_t char_height = 0;
+
 static uint32_t screen_cols = 0;
 static uint32_t screen_rows = 0;
 
 static int console_initialized = 0;
 
 static void put_pixel_internal(uint64_t x, uint64_t y, uint32_t color) {
-    if (!fb || !fb->address || x >= fb->width || y >= fb->height) {
+    if (!CONSOLE_READY || x >= fb->width || y >= fb->height) {
         return;
     }
 
@@ -29,7 +32,7 @@ static void put_pixel_internal(uint64_t x, uint64_t y, uint32_t color) {
 }
 
 static void draw_char_internal(char c, int x_pos_char, int y_pos_char, uint32_t fg, uint32_t bg) {
-    if(!is_psf_font_loaded() || !fb || !fb->address || !console_initialized) {
+    if(!is_psf_font_loaded() || !CONSOLE_READY) {
         return;
     }
 
@@ -93,7 +96,7 @@ void console_init(void) {
 }
 
 void console_clear(void) {
-    if (!fb || !fb->address || !console_initialized) {
+    if (!CONSOLE_READY) {
         return;
     }
 
@@ -108,7 +111,7 @@ void console_clear(void) {
 }
 
 void console_putchar_colored(char c, uint32_t fg_color, uint32_t bg_color) {
-    if (!console_initialized || !fb) {
+    if (!CONSOLE_READY) {
         return;
     }
 
@@ -131,7 +134,7 @@ void console_putchar(char c) {
 }
 
 void console_writestring(const char *str) {
-    if (!str) return;
+    if (!str || !CONSOLE_READY) return;
     for (size_t i = 0; str[i] != 0; i++) {
         console_putchar(str[i]);
     }
