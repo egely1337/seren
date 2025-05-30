@@ -95,6 +95,7 @@ INCLUDES_ARCH = -I$(INCLUDE_ARCH_INTERNAL_DIR)
 
 ifeq ($(ARCH), x86_64)
 	ASFLAGS_ARCH = -f elf64
+	CFLAGS_ARCH = -DARCH_X86_64
 else
     $(error Unsupported architecture: $(ARCH))
 endif
@@ -169,7 +170,7 @@ iso: $(KERNEL_ELF) $(ROOT_DIR)/limine.conf check-limine-files | directories
 	@echo "--> ISO image created successfully: $(OS_ISO)"
 
 # --- QEMU Execution ---
-QEMU_FLAGS_COMMON = -m 512M
+QEMU_FLAGS_COMMON = -m 256M
 
 QEMU_FLAGS = $($(QEMU_FLAGS_$(ARCH))) $(QEMU_FLAGS_COMMON)
 

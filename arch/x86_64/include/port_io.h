@@ -1,3 +1,5 @@
+#include <nucleus/printk.h>
+
 #ifndef X86_64_PORT_IO_H
 #define X86_64_PORT_IO_H
 
@@ -9,8 +11,12 @@ static inline void outb(uint16_t port, uint8_t value) {
 
 static inline uint8_t inb(uint16_t port) {
     uint8_t ret;
-    asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
+}
+
+static inline void io_wait(void) {
+    outb(0x80, 0);
 }
 
 #endif // ARCH_X86_64_PORT_IO_H

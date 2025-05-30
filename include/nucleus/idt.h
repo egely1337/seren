@@ -34,7 +34,7 @@ void idt_init(void);
 
 void idt_set_gate(uint8_t vector_num, uint64_t isr_address, uint16_t cs_selector, uint8_t attributes, uint8_t ist);
 
-// Defined in Assembly
+// Exception ISRs
 extern void isr0(void);   // Divide by Zero Error
 extern void isr1(void);   // Debug
 extern void isr2(void);   // Non-Maskable Interrupt
@@ -56,5 +56,13 @@ extern void isr17(void);  // Alignment Check
 extern void isr18(void);  // Machine Check
 extern void isr19(void);  // SIMD Floating-Point Exception
 extern void isr20(void);  // Virtualization Exception
+
+// Hardware IRQ Handler Stubs
+extern void irq_stub_0(void); extern void irq_stub_1(void); extern void irq_stub_2(void);
+extern void irq_stub_3(void); extern void irq_stub_4(void); extern void irq_stub_5(void);
+extern void irq_stub_6(void); extern void irq_stub_7(void); extern void irq_stub_8(void);
+extern void irq_stub_9(void); extern void irq_stub_10(void); extern void irq_stub_11(void);
+extern void irq_stub_12(void); extern void irq_stub_13(void); extern void irq_stub_14(void);
+extern void irq_stub_15(void);
 
 #endif // IDT_H

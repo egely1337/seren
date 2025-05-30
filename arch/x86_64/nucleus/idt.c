@@ -1,5 +1,6 @@
 #include <nucleus/idt.h>
 #include <nucleus/printk.h>
+#include <drivers/pic.h>
 #include <stddef.h>
 
 static idt_entry_t idt[IDT_MAX_DESCRIPTORS];
@@ -14,7 +15,7 @@ void idt_set_gate(uint8_t vector_num, uint64_t isr_address, uint16_t cs_selector
     descriptor->kernel_cs      = cs_selector;
     descriptor->ist            = ist;
     descriptor->attributes     = attributes;
-    descriptor->isr_mid        = (uint32_t)((isr_address >> 16) & 0xFFFF);
+    descriptor->isr_mid        = (uint16_t)((isr_address >> 16) & 0xFFFF);
     descriptor->isr_high       = (uint32_t)((isr_address >> 32) & 0xFFFFFFFF);
     descriptor->reserved       = 0;
 }
@@ -32,6 +33,7 @@ void idt_init(void) {
     }
 
     uint8_t gate_attributes = IDT_ATTR_PRESENT | IDT_TYPE_INTERRUPT_GATE | IDT_ATTR_RING0;
+    uint8_t irq_gate_attributes = IDT_ATTR_PRESENT | IDT_TYPE_INTERRUPT_GATE | IDT_ATTR_RING0;
 
     idt_set_gate(0,  (uint64_t)isr0,  KERNEL_CS, gate_attributes, 0); // Divide by Zero
     idt_set_gate(1,  (uint64_t)isr1,  KERNEL_CS, gate_attributes, 0); // Debug
@@ -54,6 +56,24 @@ void idt_init(void) {
     idt_set_gate(18, (uint64_t)isr18, KERNEL_CS, gate_attributes, 0); // Machine Check
     idt_set_gate(19, (uint64_t)isr19, KERNEL_CS, gate_attributes, 0); // SIMD Floating-Point
     idt_set_gate(20, (uint64_t)isr20, KERNEL_CS, gate_attributes, 0); // Virtualization
+
+    idt_set_gate(PIC_IRQ_OFFSET_MASTER + 0, (uint64_t)irq_stub_0, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_MASTER + 1, (uint64_t)irq_stub_1, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_MASTER + 2, (uint64_t)irq_stub_2, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_MASTER + 3, (uint64_t)irq_stub_3, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_MASTER + 4, (uint64_t)irq_stub_4, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_MASTER + 5, (uint64_t)irq_stub_5, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_MASTER + 6, (uint64_t)irq_stub_6, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_MASTER + 7, (uint64_t)irq_stub_7, KERNEL_CS, irq_gate_attributes, 0);
+
+    idt_set_gate(PIC_IRQ_OFFSET_SLAVE + 0,  (uint64_t)irq_stub_8,  KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_SLAVE + 1,  (uint64_t)irq_stub_9,  KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_SLAVE + 2,  (uint64_t)irq_stub_10, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_SLAVE + 3,  (uint64_t)irq_stub_11, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_SLAVE + 4,  (uint64_t)irq_stub_12, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_SLAVE + 5,  (uint64_t)irq_stub_13, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_SLAVE + 6,  (uint64_t)irq_stub_14, KERNEL_CS, irq_gate_attributes, 0);
+    idt_set_gate(PIC_IRQ_OFFSET_SLAVE + 7,  (uint64_t)irq_stub_15, KERNEL_CS, irq_gate_attributes, 0);
 
     idt_load(&idtp);
 }
