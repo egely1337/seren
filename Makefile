@@ -8,6 +8,7 @@ QEMU = qemu-system-x86_64
 ROOT_DIR = .
 ARCH_DIR = $(ROOT_DIR)/arch
 NUCLEUS_DIR = $(ROOT_DIR)/nucleus
+ILB_DIR = $(ROOT_DIR)/lib
 INCLUDE_DIR = $(ROOT_DIR)/include
 LIMINE_FILES_DIR = $(ROOT_DIR)/limine_files
 BUILD_DIR = $(ROOT_DIR)/build
@@ -17,13 +18,15 @@ ISO_ROOT_DIR = $(DIST_DIR)/iso_root
 FONT_PSF_SRC = $(ROOT_DIR)/resources/font.psf
 FONT_PSF_OBJ = $(OBJ_DIR)/font.o
 
-ASM_SOURCES = $(wildcard $(ARCH_DIR)/*/*/*.s) $(wildcard $(ARCH_DIR)/*/*/*/*.S)
+ASM_SOURCES = $(wildcard $(ARCH_DIR)/*/*/*.s) $(wildcard $(ARCH_DIR)/*/*/*/*.s)
 
 C_SOURCES_NUCLEUS = $(wildcard $(NUCLEUS_DIR)/*.c) \
                     $(wildcard $(NUCLEUS_DIR)/*/*.c) \
 					$(wildcard $(NUCLEUS_DIR)/*/*/*.c)
 C_SOURCES_ARCH = $(wildcard $(ARCH_DIR)/*/*/*.c) \
                  $(wildcard $(ARCH_DIR)/*/*/*/*.c)
+C_SOURCES_LIB = $(wildcard $(LIB_DIR)/*/*/*.c) \
+                 $(wildcard $(LIB_DIR)/*/*/*/*.c)
 
 C_SOURCES = $(C_SOURCES_NUCLEUS) $(C_SOURCES_ARCH)
 

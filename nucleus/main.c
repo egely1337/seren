@@ -1,6 +1,7 @@
 #include <limine.h>
 #include <nucleus/console.h>
 #include <nucleus/idt.h>
+#include <nucleus/printk.h>
 #include <stddef.h>
 
 __attribute__((used, section(".limine_requests")))
@@ -14,16 +15,17 @@ void kmain(void) {
 
     console_init();
 
-    console_writestring("Attempting division by zero...\n");
+    printk("Attempting division by zero...\n");
 
     volatile int divisor = 0;
     int result;
 
     result = 5 / divisor;
 
-    console_writestring("This line should NOT be reached if divide by zero exception worked!\n");
+    printk("This line should NOT be reached if divide by zero exception worked!\n");
+
     if (result == 0) {
-        console_writestring("Result was zero (but still shouldn't be here).\n");
+        printk("Result was zero (but still shouldn't be here).\n");
     }
 
     goto halt_kernel_loop;
