@@ -15,16 +15,20 @@ typedef struct {
 } __attribute__((packed)) interrupt_frame_t;
 
 const char *exception_messages[] = {
-    "Divide by Zero Error"
+    "Divide by Zero Error", "Debug", "Non-Maskable Interrupt", "Breakpoint", "Overflow",
+    "Bound Range Exceeded", "Invalid Opcode", "Device Not Available", "Double Fault",
+    "Coprocessor Segment Overrun", "Invalid TSS", "Segment Not Present", "Stack-Segment Fault",
+    "General Protection Fault", "Page Fault", "Reserved (15)", "x87 Floating-Point Exception",
+    "Alignment Check", "Machine Check", "SIMD Floating-Point Exception", "Virtualization Exception",
+    "Control Protection Exception"
 };
-
 void exception_handler(interrupt_frame_t *frame) {
-    printk("\n!! KERNEL EXCEPTION !!\n");
+    printk(KERN_EMERG "\n!! KERNEL EXCEPTION !!\n");
 
     if (frame->interrupt_number < (sizeof(exception_messages) / sizeof(char*)) && exception_messages[frame->interrupt_number] != NULL) {
-        printk("Exception (0x%x): %s\n", frame->interrupt_number, (char*)exception_messages[frame->interrupt_number]);
+        printk(KERN_EMERG "Exception (0x%x): %s\n", frame->interrupt_number, (char*)exception_messages[frame->interrupt_number]);
     } else {
-        printk("Unknown Exception (%x)", frame->interrupt_number);
+        printk(KERN_EMERG "Unknown Exception (0x%x)", frame->interrupt_number);
     }
 
     printk(KERN_CRIT "Registers:\n");

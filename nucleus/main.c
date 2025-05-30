@@ -11,9 +11,22 @@ volatile struct limine_framebuffer_request framebuffer_request = {
 };
 
 void kmain(void) {
-    idt_init();
-
     console_init();
+    printk(KERN_INFO "Seren OS - Nucleus Kernel Booting...\n");
+    printk(KERN_INFO "LFB GFX, PSF Font, Console Initialized.\n");
+
+    idt_init();
+    printk(KERN_INFO "IDT Initialized and Loaded.\n");
+
+    if (framebuffer_request.response && framebuffer_request.response->framebuffer_count > 0) {
+        struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
+        if (fb && fb->address) {
+            printk(KERN_DEBUG "Framebuffer address: %p, %ux%u %ubpp, pitch %u\n",
+                   fb->address, fb->width, fb->height, fb->bpp, fb->pitch);
+        }
+    } else {
+        printk(KERN_WARN "No framebuffer response from Limine in kmain.\n");
+    }
 
     printk("Attempting division by zero...\n");
 

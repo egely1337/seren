@@ -1,4 +1,5 @@
 #include <nucleus/idt.h>
+#include <nucleus/printk.h>
 #include <stddef.h>
 
 static idt_entry_t idt[IDT_MAX_DESCRIPTORS];
@@ -6,7 +7,6 @@ static idt_ptr_t idtp;
 
 #define KERNEL_CS 0x28
 
-__attribute__((optimize("O0")))
 void idt_set_gate(uint8_t vector_num, uint64_t isr_address, uint16_t cs_selector, uint8_t attributes, uint8_t ist) {
     idt_entry_t *descriptor = &idt[vector_num];
 
@@ -24,6 +24,8 @@ extern void idt_load(idt_ptr_t *idtp_param);
 void idt_init(void) {
     idtp.base = (uint64_t)&idt[0];
     idtp.limit = (uint16_t)(sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1);
+
+    printk(KERN_DEBUG "IDT: Initializing IDT at %p, limit 0x%x\n", (void*)idtp.base, idtp.limit);
 
     for (int i = 0; i < IDT_MAX_DESCRIPTORS; i++) {
         idt_set_gate(i, 0, 0, 0, 0);
