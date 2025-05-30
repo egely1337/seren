@@ -1,9 +1,9 @@
-#include <nucleus/printk.h>
 #include <nucleus/console.h>
 #include <nucleus/format.h>
+#include <nucleus/printk.h>
 #include <stdarg.h>
 
-#define PRINTK_BUFFER_SIZE 256
+#define PRINTK_BUFFER_SIZE     256
 #define KERNEL_LOG_BUFFER_SIZE (4 * 1024)
 
 static char temp_printk_buffer[PRINTK_BUFFER_SIZE];

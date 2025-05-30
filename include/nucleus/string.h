@@ -6,12 +6,13 @@
 
 /**
  * @brief Calculates the length of a null-terminated string.
- * 
+ *
  * Counts the number of characters in the string pointed to by `s`
  * before the terminating null byte.
- * 
+ *
  * @param s The null-terminated string.
- * @return The number of characters in the string (excluding the null terminator).
+ * @return The number of characters in the string (excluding the null
+ * terminator).
  */
 size_t strlen(const char *s);
 
@@ -23,7 +24,8 @@ size_t strlen(const char *s);
  * enough to hold the source string.
  * Behavior is undefined if the source and destination strings overlap.
  *
- * @param dest Pointer to the destination array where the content is to be copied.
+ * @param dest Pointer to the destination array where the content is to be
+ * copied.
  * @param src Pointer to the null-terminated string to be copied.
  * @return A pointer to the destination string `dest`.
  */
@@ -84,8 +86,8 @@ char *strncat(char *dest, const char *src, size_t n);
  *
  * @param s1 The first string.
  * @param s2 The second string.
- * @return An integer less than, equal to, or greater than zero if `s1` is found,
- * respectively, to be less than, to match, or be greater than `s2`.
+ * @return An integer less than, equal to, or greater than zero if `s1` is
+ * found, respectively, to be less than, to match, or be greater than `s2`.
  */
 int strcmp(const char *s1, const char *s2);
 

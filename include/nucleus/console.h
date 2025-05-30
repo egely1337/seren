@@ -1,8 +1,8 @@
 #ifndef NUCLEUS_CONSOLE_H
 #define NUCLEUS_CONSOLE_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /**
  * This is the main public header for Nucleus's console.
@@ -15,7 +15,7 @@
 
 /**
  * @brief Initializes the console system.
- * 
+ *
  * It gets the framebuffer ready, loads our font,
  * figures out how many rows/columns we have and gives the screen a fresh wipe.
  */
@@ -23,28 +23,28 @@ void console_init(void);
 
 /**
  * @brief Wipes the console.
- * 
- * This function will fill the entire screen with the current default background color
- * and send the cursor back to the top-left corner (0,0).
+ *
+ * This function will fill the entire screen with the current default background
+ * color and send the cursor back to the top-left corner (0,0).
  */
 void console_clear(void);
 
 /**
  * @brief Writes a single character onto the screen.
- * 
+ *
  * This is for printing one character at a time. It'll use the
  * default colors.
- * 
+ *
  * @param c The character you want to put
  */
 void console_putchar(char c);
 
 /**
  * @brief Prints a whole string of characters using default colors.
- * 
- * Give it a null-terminated string and it'll print it out character by character
- * using console_putchar.
- * 
+ *
+ * Give it a null-terminated string and it'll print it out character by
+ * character using console_putchar.
+ *
  * @param str The string of text you want to display
  */
 void console_writestring(const char *str);

@@ -2,12 +2,10 @@
 #include <nucleus/io.h>
 #include <nucleus/printk.h>
 
-#define ICW1_INIT           0x10
-#define ICW1_ICW4_NEEDED    0x01
-
-#define PIC_OCW3_READ_ISR   0x0B
-
-#define ICW4_8086_MODE      0x01
+#define ICW1_INIT         0x10
+#define ICW1_ICW4_NEEDED  0x01
+#define PIC_OCW3_READ_ISR 0x0B
+#define ICW4_8086_MODE    0x01
 
 void pic_remap_and_init(void) {
     // We need to send this both to the master and slave PICs.
@@ -28,8 +26,8 @@ void pic_remap_and_init(void) {
     outb(PIC1_DATA_PORT, 0x04);
     io_wait();
 
-    // Tell Slave PIC its "cascade identity" - it's the one connected to IRQ2 of the master.
-    // The value 2 means it identifies itself as being on line 2.
+    // Tell Slave PIC its "cascade identity" - it's the one connected to IRQ2 of
+    // the master. The value 2 means it identifies itself as being on line 2.
     outb(PIC2_DATA_PORT, 0x02);
     io_wait();
 

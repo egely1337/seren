@@ -22,9 +22,9 @@ static uint8_t inb(uint16_t port);
 static void io_wait(void);
 
 #if defined(ARCH_X86_64)
-    #include <port_io.h>
+#include <port_io.h>
 #else
-    #error "Unsupported architecture for I/O operations"
+#error "Unsupported architecture for I/O operations"
 #endif
 
 #endif

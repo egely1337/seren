@@ -4,13 +4,13 @@
 #include <stdint.h>
 
 typedef struct irq_context {
-    
+
     uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
     uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;
-    
+
     uint64_t vector_number;
     uint64_t error_code;
-    
+
     uint64_t rip_cpu;
     uint64_t cs_cpu;
     uint64_t rflags_cpu;

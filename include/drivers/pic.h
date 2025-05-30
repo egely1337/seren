@@ -8,7 +8,7 @@
 #define PIC2_COMMAND_PORT 0xA0
 #define PIC2_DATA_PORT    0xA1
 
-#define PIC_EOI           0x20
+#define PIC_EOI 0x20
 
 #define PIC_IRQ_OFFSET_MASTER 0x20
 #define PIC_IRQ_OFFSET_SLAVE  0x28

@@ -1,34 +1,31 @@
+#include <drivers/pic.h>
 #include <limine.h>
 #include <nucleus/console.h>
 #include <nucleus/idt.h>
-#include <nucleus/printk.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/io.h>
-#include <drivers/pic.h>
 #include <nucleus/memory/pmm.h>
+#include <nucleus/printk.h>
 #include <stddef.h>
 
-__attribute__((used, section(".limine_requests")))
-volatile struct limine_framebuffer_request framebuffer_request = {
-    .id = LIMINE_FRAMEBUFFER_REQUEST,
-    .revision = 0
-};
+__attribute__((
+    used,
+    section(".limine_requests"))) volatile struct limine_framebuffer_request
+    framebuffer_request = {.id = LIMINE_FRAMEBUFFER_REQUEST, .revision = 0};
 
-__attribute__((used, section(".limine_requests")))
-volatile struct limine_hhdm_request hhdm_request = {
-    .id = LIMINE_HHDM_REQUEST,
-    .revision = 0
-};
+__attribute__((used,
+               section(".limine_requests"))) volatile struct limine_hhdm_request
+    hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 0};
 
-__attribute__((used, section(".limine_requests")))
-volatile struct limine_memmap_request memmap_request = {
-    .id = LIMINE_MEMMAP_REQUEST,
-    .revision = 0
-};
+__attribute__((
+    used, section(".limine_requests"))) volatile struct limine_memmap_request
+    memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 0};
 
-static void test_keyboard_handler(irq_context_t *context __attribute__((unused))) {
+static void test_keyboard_handler(irq_context_t *context
+                                  __attribute__((unused))) {
     uint8_t scancode = inb(0x60);
-    printk(KERN_INFO "Keyboard press! Vector: %lu, Scancode: 0x%x\n", context->vector_number, scancode);
+    printk(KERN_INFO "Keyboard press! Vector: %lu, Scancode: 0x%x\n",
+           context->vector_number, scancode);
 }
 
 void kmain(void) {
@@ -51,14 +48,16 @@ void kmain(void) {
     printk(KERN_INFO "Unmasked Keyboard (IRQ1).\n");
 
     printk(KERN_INFO "Enabling interrupts (STI).\n");
-    __asm__ volatile ("sti");
+    __asm__ volatile("sti");
 
-    printk(KERN_INFO "Initialization sequence complete. Entering halt loop. See you <3\n");
+    printk(
+        KERN_INFO
+        "Initialization sequence complete. Entering halt loop. See you <3\n");
 
     goto halt_loop;
 
 halt_loop:
-    while(1) {
+    while (1) {
         __asm__ volatile("hlt");
     }
 }

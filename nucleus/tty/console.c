@@ -1,9 +1,9 @@
-#include <nucleus/console.h>
 #include <drivers/gfx.h>
-#include <nucleus/font.h>
 #include <limine.h>
+#include <nucleus/console.h>
+#include <nucleus/font.h>
 
-#define CONSOLE_READY (console_initialized && fb && fb->address)
+#define CONSOLE_READY  (console_initialized && fb && fb->address)
 #define TAB_STOP_WIDTH 4
 
 extern const unsigned char _binary_resources_font_psf_start[];
@@ -27,8 +27,10 @@ static unsigned int effective_char_cell_width = 0;
 
 static int console_initialized_flag = 0;
 
-static void console_render_glyph(char c, int char_cell_x, int char_cell_y, uint32_t fg, uint32_t bg) {
-    if (!console_initialized_flag || !active_gfx_device.address || !active_font.get_glyph) {
+static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
+                                 uint32_t fg, uint32_t bg) {
+    if (!console_initialized_flag || !active_gfx_device.address ||
+        !active_font.get_glyph) {
         return;
     }
 
@@ -41,35 +43,38 @@ static void console_render_glyph(char c, int char_cell_x, int char_cell_y, uint3
     }
 
     int screen_pixel_x_cell_start = char_cell_x * effective_char_cell_width;
-    int screen_pixel_y_cell_start = char_cell_y * font_get_char_height(&active_font);
+    int screen_pixel_y_cell_start =
+        char_cell_y * font_get_char_height(&active_font);
 
-    for (unsigned int y_in_glyph = 0; y_in_glyph < glyph_info.height_px; y_in_glyph++) {
-        for (unsigned int x_in_glyph = 0; x_in_glyph < glyph_info.width_px; x_in_glyph++) {
+    for (unsigned int y_in_glyph = 0; y_in_glyph < glyph_info.height_px;
+         y_in_glyph++) {
+        for (unsigned int x_in_glyph = 0; x_in_glyph < glyph_info.width_px;
+             x_in_glyph++) {
             unsigned int byte_idx_in_row = x_in_glyph / 8;
             unsigned int bit_idx_in_byte = 7 - (x_in_glyph % 8);
 
-            if (byte_idx_in_row >= glyph_info.bytes_per_row) continue;
+            if (byte_idx_in_row >= glyph_info.bytes_per_row)
+                continue;
 
-            const unsigned char *row_data_ptr = glyph_info.bitmap + (y_in_glyph * glyph_info.bytes_per_row);
+            const unsigned char *row_data_ptr =
+                glyph_info.bitmap + (y_in_glyph * glyph_info.bytes_per_row);
 
             if ((row_data_ptr[byte_idx_in_row] >> bit_idx_in_byte) & 1) {
                 gfx_put_pixel(&active_gfx_device,
-                            screen_pixel_x_cell_start + x_in_glyph,
-                            screen_pixel_y_cell_start + y_in_glyph,
-                            fg);
+                              screen_pixel_x_cell_start + x_in_glyph,
+                              screen_pixel_y_cell_start + y_in_glyph, fg);
             } else {
                 gfx_put_pixel(&active_gfx_device,
-                            screen_pixel_x_cell_start + x_in_glyph,
-                            screen_pixel_y_cell_start + y_in_glyph,
-                            bg);
+                              screen_pixel_x_cell_start + x_in_glyph,
+                              screen_pixel_y_cell_start + y_in_glyph, bg);
             }
         }
 
-        for (unsigned int x_space = glyph_info.width_px; x_space < effective_char_cell_width; x_space++) {
+        for (unsigned int x_space = glyph_info.width_px;
+             x_space < effective_char_cell_width; x_space++) {
             gfx_put_pixel(&active_gfx_device,
-                        screen_pixel_x_cell_start + x_space,
-                        screen_pixel_y_cell_start + y_in_glyph,
-                        bg);
+                          screen_pixel_x_cell_start + x_space,
+                          screen_pixel_y_cell_start + y_in_glyph, bg);
         }
     }
 }
@@ -84,7 +89,8 @@ void console_init(void) {
         return;
     }
 
-    struct limine_framebuffer *limine_fb = framebuffer_request.response->framebuffers[0];
+    struct limine_framebuffer *limine_fb =
+        framebuffer_request.response->framebuffers[0];
 
     if (!limine_fb || !limine_fb->address) {
         return;
@@ -94,8 +100,11 @@ void console_init(void) {
         return;
     }
 
-    size_t psf_data_size = (size_t)((const char*)_binary_resources_font_psf_end - (const char*)_binary_resources_font_psf_start);
-    if (font_init_psf(&active_font, _binary_resources_font_psf_start, psf_data_size) != 0) {
+    size_t psf_data_size =
+        (size_t)((const char *)_binary_resources_font_psf_end -
+                 (const char *)_binary_resources_font_psf_start);
+    if (font_init_psf(&active_font, _binary_resources_font_psf_start,
+                      psf_data_size) != 0) {
         return;
     }
 
@@ -109,7 +118,8 @@ void console_init(void) {
     effective_char_cell_width = f_width + inter_char_spacing;
 
     if (effective_char_cell_width > 0) {
-        screen_cols = gfx_get_width(&active_gfx_device) / effective_char_cell_width;
+        screen_cols =
+            gfx_get_width(&active_gfx_device) / effective_char_cell_width;
     } else {
         screen_cols = 0;
     }
@@ -144,45 +154,44 @@ void console_putchar_colored(char c, uint32_t fg_color, uint32_t bg_color) {
     }
 
     switch (c) {
-        case '\n':
+    case '\n':
+        cursor_x = 0;
+        cursor_y++;
+        break;
+    case '\r':
+        cursor_x = 0;
+        break;
+    case '\b':
+        if (cursor_x > 0) {
+            cursor_x--;
+            console_render_glyph(' ', cursor_x, cursor_y, bg_color, bg_color);
+        } else if (cursor_y > 0) {
+            cursor_y--;
+            cursor_x = (screen_cols > 0) ? (screen_cols - 1) : 0;
+            console_render_glyph(' ', cursor_x, cursor_y, bg_color, bg_color);
+        }
+        break;
+    case '\t': {
+        int spaces_to_next_tab = TAB_STOP_WIDTH - (cursor_x % TAB_STOP_WIDTH);
+        for (int i = 0; i < spaces_to_next_tab; i++) {
+            console_putchar_colored(' ', fg_color, bg_color);
+        }
+    }
+        return;
+    default:
+        if (cursor_x >= (int)screen_cols && screen_cols > 0) {
             cursor_x = 0;
             cursor_y++;
-            break;
-        case '\r':
-            cursor_x = 0;
-            break;
-        case '\b':
-            if (cursor_x > 0) {
-                cursor_x--;
-                console_render_glyph(' ', cursor_x, cursor_y, bg_color, bg_color); 
-            } else if(cursor_y > 0) {
-                cursor_y--;
-                cursor_x = (screen_cols > 0) ? (screen_cols - 1) : 0;
-                console_render_glyph(' ', cursor_x, cursor_y, bg_color, bg_color); 
-            }
-            break;
-        case '\t':
-            {
-                int spaces_to_next_tab = TAB_STOP_WIDTH - (cursor_x % TAB_STOP_WIDTH);
-                for (int i = 0; i < spaces_to_next_tab; i++) {
-                    console_putchar_colored(' ', fg_color, bg_color);
-                }
-            }
-            return;
-        default:
-            if (cursor_x >= (int)screen_cols && screen_cols > 0) {
-                cursor_x = 0;
-                cursor_y++;
-            }
+        }
 
-            if (cursor_y >= (int)screen_rows && screen_rows > 0) {
-                // TODO: SCROLL
-                cursor_y = screen_rows - 1;
-            }
+        if (cursor_y >= (int)screen_rows && screen_rows > 0) {
+            // TODO: SCROLL
+            cursor_y = screen_rows - 1;
+        }
 
-            console_render_glyph(c, cursor_x, cursor_y, fg_color, bg_color);
-            cursor_x++;
-            break;
+        console_render_glyph(c, cursor_x, cursor_y, fg_color, bg_color);
+        cursor_x++;
+        break;
     }
 
     if (cursor_y >= (int)screen_rows && screen_rows > 0) {
@@ -196,7 +205,8 @@ void console_putchar(char c) {
 }
 
 void console_writestring(const char *str) {
-    if (!str || !console_initialized_flag) return;
+    if (!str || !console_initialized_flag)
+        return;
     for (size_t i = 0; str[i] != '\0'; i++) {
         console_putchar(str[i]);
     }
