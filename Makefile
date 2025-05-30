@@ -101,7 +101,7 @@ iso: $(KERNEL_ELF) $(ROOT_DIR)/limine.conf check-limine-files | directories
 	
 	@echo "--> ISO image created successfully: $(OS_ISO)"
 
-QEMU_FLAGS = -m 56M
+QEMU_FLAGS = -m 256M
 
 .PHONY: fetch-limine
 fetch-limine:

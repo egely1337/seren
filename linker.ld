@@ -50,10 +50,15 @@ SECTIONS
         *(.data .data.*)
     } :phdr_data
 
+    . = ALIGN(PAGE_SIZE);
+
     .bss : {
         *(.bss .bss.*)
         *(COMMON)
     } :phdr_data
+
+    . = ALIGN(PAGE_SIZE);
+    _kernel_end = .;
 
     /DISCARD/ : {
         *(.eh_frame*)
