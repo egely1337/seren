@@ -34,26 +34,23 @@ SECTIONS
 
     . = ALIGN(PAGE_SIZE);
 
-    /* The LMA calculation here is tricky. We're trying to say:
-       "Load this section right after physical end of the .limine_requests section,
-       but make sure it starts on a page boundary." */
-    .text : AT(ALIGN(PAGE_SIZE, LOADADDR(.limine_requests) + SIZEOF(.limine_requests))) {
+    .text : {
         *(.text .text.*)
     } :phdr_text
 
     . = ALIGN(PAGE_SIZE);
 
-    .rodata : AT(ALIGN(PAGE_SIZE, LOADADDR(.text) + SIZEOF(.text))) {
+    .rodata : {
         *(.rodata .rodata.*)
     } :phdr_rodata
 
     . = ALIGN(PAGE_SIZE);
 
-    .data : AT(ALIGN(PAGE_SIZE, LOADADDR(.rodata) + SIZEOF(.rodata))) {
+    .data : {
         *(.data .data.*)
     } :phdr_data
 
-    .bss : AT(ALIGN(PAGE_SIZE, LOADADDR(.data) + SIZEOF(.data))) {
+    .bss : {
         *(.bss .bss.*)
         *(COMMON)
     } :phdr_data

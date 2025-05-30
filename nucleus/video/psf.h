@@ -21,11 +21,24 @@
 #define PSF1_SEPARATOR 0xFFFF
 #define PSF1_STARTSEQ 0xFFFE
 
-struct psf1_header {
+typedef struct psf1_header {
     uint8_t magic[2];
     uint8_t mode;
     uint8_t charsize;
-};
+} __attribute__((packed)) psf1_header_t;
+
+typedef struct psf_font_internal_data {
+    const unsigned char *raw_data_start;
+    size_t raw_data_size;
+
+    const psf1_header_t *header;
+    const unsigned char *glyph_bitmaps_start;
+
+    unsigned int num_glyphs;
+    unsigned int char_width_px;
+    unsigned int char_height_px;
+    unsigned int bytes_per_glyph;
+} psf_font_internal_data_t;
 
 /**
  * @brief Reads our embedded PSF font data and figures out what's what.

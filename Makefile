@@ -20,7 +20,8 @@ FONT_PSF_OBJ = $(OBJ_DIR)/font.o
 ASM_SOURCES = $(wildcard $(ARCH_DIR)/*/*/*.s) $(wildcard $(ARCH_DIR)/*/*/*/*.S)
 
 C_SOURCES_NUCLEUS = $(wildcard $(NUCLEUS_DIR)/*.c) \
-                    $(wildcard $(NUCLEUS_DIR)/*/*.c)
+                    $(wildcard $(NUCLEUS_DIR)/*/*.c) \
+					$(wildcard $(NUCLEUS_DIR)/*/*/*.c)
 C_SOURCES_ARCH = $(wildcard $(ARCH_DIR)/*/*/*.c) \
                  $(wildcard $(ARCH_DIR)/*/*/*/*.c)
 
@@ -41,8 +42,8 @@ INCLUDES = -I$(INCLUDE_DIR) \
 
 CFLAGS = -std=c11 $(INCLUDES) -Wall -Wextra -Werror -pedantic -O2 -g \
 	-ffreestanding -fno-stack-protector -fno-pie \
-	-mno-red-zone -MMD -MP \
-	-mcmodel=kernel
+	-mno-red-zone -mcmodel=kernel -mgeneral-regs-only \
+	-MMD -MP
 
 ASFLAGS = -f elf64 -g
 
