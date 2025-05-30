@@ -8,7 +8,7 @@ QEMU = qemu-system-x86_64
 ROOT_DIR = .
 ARCH_DIR = $(ROOT_DIR)/arch
 NUCLEUS_DIR = $(ROOT_DIR)/nucleus
-ILB_DIR = $(ROOT_DIR)/lib
+LIB_DIR = $(ROOT_DIR)/lib
 INCLUDE_DIR = $(ROOT_DIR)/include
 LIMINE_FILES_DIR = $(ROOT_DIR)/limine_files
 BUILD_DIR = $(ROOT_DIR)/build
@@ -25,10 +25,11 @@ C_SOURCES_NUCLEUS = $(wildcard $(NUCLEUS_DIR)/*.c) \
 					$(wildcard $(NUCLEUS_DIR)/*/*/*.c)
 C_SOURCES_ARCH = $(wildcard $(ARCH_DIR)/*/*/*.c) \
                  $(wildcard $(ARCH_DIR)/*/*/*/*.c)
-C_SOURCES_LIB = $(wildcard $(LIB_DIR)/*/*/*.c) \
-                 $(wildcard $(LIB_DIR)/*/*/*/*.c)
+C_SOURCES_LIB = $(wildcard $(LIB_DIR)/*.c) \
+				$(wildcard $(LIB_DIR)/*/*/*.c) \
+                $(wildcard $(LIB_DIR)/*/*/*/*.c)
 
-C_SOURCES = $(C_SOURCES_NUCLEUS) $(C_SOURCES_ARCH)
+C_SOURCES = $(C_SOURCES_NUCLEUS) $(C_SOURCES_ARCH) $(C_SOURCES_LIB)
 
 ASM_OBJECTS = $(patsubst $(ROOT_DIR)/%.s,$(OBJ_DIR)/%.o,$(ASM_SOURCES))
 C_OBJECTS   = $(patsubst $(ROOT_DIR)/%.c,$(OBJ_DIR)/%.o,$(C_SOURCES))

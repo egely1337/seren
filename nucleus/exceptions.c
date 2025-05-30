@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <nucleus/console.h>
+#include <nucleus/printk.h>
 
 typedef struct {
     uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
@@ -14,74 +14,34 @@ typedef struct {
     uint64_t ss;
 } __attribute__((packed)) interrupt_frame_t;
 
-static void print_hex(uint64_t n) {
-    char buf[17];
-    buf[16] = '\0';
-    int i = 15;
-    if (n == 0) {
-        console_putchar('0');
-        return;
-    }
-    while (n > 0 && i >= 0) {
-        uint8_t digit = n % 16;
-        if (digit < 10) {
-            buf[i--] = '0' + digit;
-        } else {
-            buf[i--] = 'A' + (digit - 10);
-        }
-        n /= 16;
-    }
-    console_writestring(&buf[i + 1]);
-}
-
 const char *exception_messages[] = {
     "Divide by Zero Error"
 };
 
 void exception_handler(interrupt_frame_t *frame) {
-    console_writestring("\n!! KERNEL EXCEPTION !!\n");
+    printk("\n!! KERNEL EXCEPTION !!\n");
 
     if (frame->interrupt_number < (sizeof(exception_messages) / sizeof(char*)) && exception_messages[frame->interrupt_number] != NULL) {
-        console_writestring("Exception (");
-        print_hex(frame->interrupt_number);
-        console_writestring("): ");
-        console_writestring((char*)exception_messages[frame->interrupt_number]);
-        console_putchar('\n');
+        printk("Exception (0x%x): %s\n", frame->interrupt_number, (char*)exception_messages[frame->interrupt_number]);
     } else {
-        console_writestring("Unknown Exception (");
-        print_hex(frame->interrupt_number);
-        console_writestring(")\n");
+        printk("Unknown Exception (%x)", frame->interrupt_number);
     }
 
-    console_writestring("Registers:\n");
-    console_writestring("  RIP: 0x"); print_hex(frame->rip);
-    console_writestring("  RSP: 0x"); print_hex(frame->rsp);
-    console_writestring("  RFLAGS: 0x"); print_hex(frame->rflags);
-    console_putchar('\n');
-    console_writestring("  RAX: 0x"); print_hex(frame->rax);
-    console_writestring("  RBX: 0x"); print_hex(frame->rbx);
-    console_writestring("  RCX: 0x"); print_hex(frame->rcx);
-    console_writestring("  RDX: 0x"); print_hex(frame->rdx);
-    console_putchar('\n');
-    console_writestring("  RSI: 0x"); print_hex(frame->rsi);
-    console_writestring("  RDI: 0x"); print_hex(frame->rdi);
-    console_writestring("  RBP: 0x"); print_hex(frame->rbp);
-    console_putchar('\n');
-    console_writestring("  R8:  0x"); print_hex(frame->r8);
-    console_writestring("  R9:  0x"); print_hex(frame->r9);
-    console_writestring("  R10: 0x"); print_hex(frame->r10);
-    console_writestring("  R11: 0x"); print_hex(frame->r11);
-    console_putchar('\n');
-    console_writestring("  R12: 0x"); print_hex(frame->r12);
-    console_writestring("  R13: 0x"); print_hex(frame->r13);
-    console_writestring("  R14: 0x"); print_hex(frame->r14);
-    console_writestring("  R15: 0x"); print_hex(frame->r15);
-    console_putchar('\n');
-    console_writestring("  CS:  0x"); print_hex(frame->cs);
-    console_writestring("  SS:  0x"); print_hex(frame->ss);
-    console_putchar('\n');
+    printk(KERN_CRIT "Registers:\n");
+    printk(KERN_CRIT "  RIP: %p  RSP: %p  RFLAGS: %p\n",
+           (void*)frame->rip, (void*)frame->rsp, (void*)frame->rflags);
+    printk(KERN_CRIT "  RAX: %p  RBX: %p  RCX: %p  RDX: %p\n",
+           (void*)frame->rax, (void*)frame->rbx, (void*)frame->rcx, (void*)frame->rdx);
+    printk(KERN_CRIT "  RSI: %p  RDI: %p  RBP: %p\n",
+           (void*)frame->rsi, (void*)frame->rdi, (void*)frame->rbp);
+    printk(KERN_CRIT "  R8:  %p  R9:  %p  R10: %p  R11: %p\n",
+           (void*)frame->r8,  (void*)frame->r9,  (void*)frame->r10, (void*)frame->r11);
+    printk(KERN_CRIT "  R12: %p  R13: %p  R14: %p  R15: %p\n",
+           (void*)frame->r12, (void*)frame->r13, (void*)frame->r14, (void*)frame->r15);
+    printk(KERN_CRIT "  CS:  %p  SS:  %p\n",
+           (void*)frame->cs,  (void*)frame->ss);
 
-    console_writestring("System halted.\n");
+    printk(KERN_EMERG "System halted.\n");
 
     while(1) {
         __asm__ volatile ("cli; hlt");
