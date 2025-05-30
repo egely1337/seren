@@ -5,6 +5,8 @@
 #define ICW1_INIT           0x10
 #define ICW1_ICW4_NEEDED    0x01
 
+#define PIC_OCW3_READ_ISR   0x0B
+
 #define ICW4_8086_MODE      0x01
 
 void pic_remap_and_init(void) {
@@ -84,4 +86,14 @@ void pic_unmask_irq(uint8_t irq_line) {
     }
     value = inb(port) & ~(1 << irq_line);
     outb(port, value);
+}
+
+uint8_t pic_read_master_isr(void) {
+    outb(PIC1_COMMAND_PORT, PIC_OCW3_READ_ISR);
+    return inb(PIC1_COMMAND_PORT);
+}
+
+uint8_t pic_read_slave_isr(void) {
+    outb(PIC2_COMMAND_PORT, PIC_OCW3_READ_ISR);
+    return inb(PIC2_COMMAND_PORT);
 }

@@ -38,13 +38,35 @@ void irq_c_dispatcher(irq_context_t *frame) {
         original_irq_line = (frame->vector_number - PIC_IRQ_OFFSET_SLAVE) + 8;
     }
 
-    if (original_irq_line < 16 && s_irq_c_routines[original_irq_line] != NULL) {
-        irq_c_handler_t handler_to_call = s_irq_c_routines[original_irq_line];
-        handler_to_call(frame);
-    } else {
-        if (original_irq_line != 7) { 
-            printk(KERN_WARN "IRQ: Unhandled IRQ line %u (IDT vector %lu)\n", original_irq_line, frame->vector_number);
+    if (original_irq_line == 0xFF) {
+        printk(KERN_ERR "IRQ: Received interrupt with unmappable vector %lu!\n", frame->vector_number);
+        // No EOI needed as we don't know which PIC, or if it's even a PIC IRQ.
+        return;
+    }
+
+    if (original_irq_line == 7) { // Potentially spurious IRQ from Master PIC
+        uint8_t master_isr = pic_read_master_isr();
+        if (!(master_isr & (1 << 7))) {
+            printk(KERN_WARN "IRQ: Spurious IRQ7 detected (vector %lu).\n", frame->vector_number);
+            return;
         }
+    } else if (original_irq_line == 15) {
+        uint8_t slave_isr = pic_read_slave_isr();
+
+        if (!(slave_isr & (1 << 7))) {
+            printk(KERN_WARN "IRQ: Spurious IRQ15 detected (vector %lu).\n", frame->vector_number);
+
+            pic_send_eoi(2);
+            return;
+        }
+    }
+
+    int handled = 0;
+    if (s_irq_c_routines[original_irq_line] != NULL) {
+        s_irq_c_routines[original_irq_line](frame);
+        handled = 1;
+    } else {
+        printk(KERN_WARN "IRQ: Unhandled IRQ line %u (IDT vector %lu)\n", original_irq_line, frame->vector_number);
     }
 
     // Important! Tell the PIC that we've finished handling this interrupt.

@@ -38,4 +38,16 @@ void pic_mask_irq(uint8_t irq_line);
  */
 void pic_unmask_irq(uint8_t irq_line);
 
+/**
+ * @brief Reads the In-Service Register (ISR) of the Master PIC.
+ * @return The 8-bit ISR value of the Master PIC.
+ */
+uint8_t pic_read_master_isr(void);
+
+/**
+ * @brief Reads the In-Service Register (ISR) of the Slave PIC.
+ * @return The 8-bit ISR value of the Slave PIC.
+ */
+uint8_t pic_read_slave_isr(void);
+
 #endif // DRIVERS_PIC_H
