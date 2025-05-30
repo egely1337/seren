@@ -2,7 +2,7 @@
 #include <nucleus/console.h>
 #include <nucleus/idt.h>
 #include <nucleus/printk.h>
-#include <nucleus/mem/pmm.h>
+#include <nucleus/memory/pmm.h>
 #include <stddef.h>
 
 __attribute__((used, section(".limine_requests")))

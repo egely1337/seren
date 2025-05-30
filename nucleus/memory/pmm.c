@@ -1,4 +1,4 @@
-#include <nucleus/mem/pmm.h>
+#include <nucleus/memory/pmm.h>
 #include <nucleus/printk.h> 
 #include <stddef.h>         
 #include <stdint.h>         

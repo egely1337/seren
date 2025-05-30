@@ -1,7 +1,6 @@
 #include <nucleus/console.h>
-#include <nucleus/drivers/gfx.h>
+#include <drivers/gfx.h>
 #include <nucleus/font.h>
-#include "psf.h"
 #include <limine.h>
 
 #define CONSOLE_READY (console_initialized && fb && fb->address)

@@ -1,90 +1,157 @@
-TARGET_TRIPLET ?= x86_64-elf
+# --- Architecture Configuration ---
+ARCH ?= x86_64
+ARCH_TRIPLET ?= x86-64
+
+ifeq ($(ARCH), x86_64)
+	ARCH_TRIPLET = x86-64
+else
+	$(error Unsupported architecture: $(ARCH))
+endif
+
+# --- Toolchain Configuration ---
+TARGET_TRIPLET ?= $(ARCH)-elf
 CC = $(TARGET_TRIPLET)-gcc
 AS = nasm
 LD = $(TARGET_TRIPLET)-ld
 OBJCOPY = $(TARGET_TRIPLET)-objcopy
-QEMU = qemu-system-x86_64
+QEMU = qemu-system-$(ARCH)
+
+# --- Directory Structure ---
 
 ROOT_DIR = .
-ARCH_DIR = $(ROOT_DIR)/arch
-NUCLEUS_DIR = $(ROOT_DIR)/nucleus
-LIB_DIR = $(ROOT_DIR)/lib
-INCLUDE_DIR = $(ROOT_DIR)/include
-LIMINE_FILES_DIR = $(ROOT_DIR)/limine_files
 BUILD_DIR = $(ROOT_DIR)/build
-OBJ_DIR = $(BUILD_DIR)/obj
+OBJ_DIR_BASE = $(BUILD_DIR)/obj
+OBJ_DIR = $(OBJ_DIR_BASE)/$(ARCH)
 DIST_DIR = $(BUILD_DIR)/dist
 ISO_ROOT_DIR = $(DIST_DIR)/iso_root
+
+# Source directories
+ARCH_SRC_DIR = $(ROOT_DIR)/arch/$(ARCH)
+KERNEL_SRC_DIR = $(ROOT_DIR)/nucleus
+DRIVERS_SRC_DIR = $(ROOT_DIR)/drivers
+LIB_SRC_DIR = $(ROOT_DIR)/lib
+
+# Include directories
+INCLUDE_MAIN_DIR = include
+INCLUDE_ARCH_INTERNAL_DIR = $(ARCH_SRC_DIR)/include
+INCLUDE_KERNEL_API_DIR = $(INCLUDE_MAIN_DIR)/kernel
+INCLUDE_DRIVERS_API_DIR = $(INCLUDE_MAIN_DIR)/drivers
+INCLUDE_LIB_API_DIR = $(INCLUDE_MAIN_DIR)/lib
+
+LIMINE_FILES_DIR = $(ROOT_DIR)/limine_files
+
+# Source file discovery
+
+find_files = $(shell find $(1) -name "$(2)" -print)
+
+ASM_FILES = $(call find_files,$(ARCH_SRC_DIR),*.s) \
+			$(call find_files,$(ARCH_SRC_DIR),*.S)
+
+C_FILES_ARCH = $(call find_files,$(ARCH_SRC_DIR),*.c)
+C_FILES_KERNEL = $(call find_files,$(KERNEL_SRC_DIR),*.c)
+C_FILES_DRIVERS = $(call find_files,$(DRIVERS_SRC_DIR),*.c)
+C_FILES_LIB = $(call find_files,$(LIB_SRC_DIR),*.c)
+
+C_SOURCES = $(C_FILES_ARCH) $(C_FILES_KERNEL) $(C_FILES_DRIVERS) $(C_FILES_LIB)
+
+# --- Object Files ---
+
+src_to_obj = $(addprefix $(OBJ_DIR)/, $(patsubst ./%,%,$(1)))
+obj_to_src = $(patsubst $(OBJ_DIR)/%,./%,$(1))
+
+ASM_OBJECTS = $(patsubst %.s,%.o,$(call src_to_obj, $(filter %.s,$(ASM_FILES)))) \
+              $(patsubst %.S,%.o,$(call src_to_obj, $(filter %.S,$(ASM_FILES))))
+C_OBJECTS   = $(patsubst %.c,%.o,$(call src_to_obj, $(C_SOURCES)))
+
 FONT_PSF_SRC = $(ROOT_DIR)/resources/font.psf
-FONT_PSF_OBJ = $(OBJ_DIR)/font.o
+FONT_PSF_OBJ = $(OBJ_DIR)/resources/font.o
 
-ASM_SOURCES = $(wildcard $(ARCH_DIR)/*/*/*.s) $(wildcard $(ARCH_DIR)/*/*/*/*.s)
-
-C_SOURCES_NUCLEUS = $(wildcard $(NUCLEUS_DIR)/*.c) \
-                    $(wildcard $(NUCLEUS_DIR)/*/*.c) \
-					$(wildcard $(NUCLEUS_DIR)/*/*/*.c)
-C_SOURCES_ARCH = $(wildcard $(ARCH_DIR)/*/*/*.c) \
-                 $(wildcard $(ARCH_DIR)/*/*/*/*.c)
-C_SOURCES_LIB = $(wildcard $(LIB_DIR)/*.c) \
-				$(wildcard $(LIB_DIR)/*/*/*.c) \
-                $(wildcard $(LIB_DIR)/*/*/*/*.c)
-
-C_SOURCES = $(C_SOURCES_NUCLEUS) $(C_SOURCES_ARCH) $(C_SOURCES_LIB)
-
-ASM_OBJECTS = $(patsubst $(ROOT_DIR)/%.s,$(OBJ_DIR)/%.o,$(ASM_SOURCES))
-C_OBJECTS   = $(patsubst $(ROOT_DIR)/%.c,$(OBJ_DIR)/%.o,$(C_SOURCES))
-OBJECTS     = $(ASM_OBJECTS) $(C_OBJECTS) $(FONT_PSF_OBJ)
+OBJECTS     = $(sort $(ASM_OBJECTS) $(C_OBJECTS) $(FONT_PSF_OBJ))
 DEPS        = $(C_OBJECTS:.o=.d)
 
-KERNEL_ELF = $(BUILD_DIR)/nucleus.elf
-OS_ISO = $(DIST_DIR)/seren.iso
+# --- Output Files ---
 
-INCLUDES = -I$(INCLUDE_DIR) \
-           -I$(INCLUDE_DIR)/nucleus \
-           -I$(LIBC_DIR)/include \
-           -I$(ARCH_DIR)/x86_64/include
+KERNEL_ELF = $(BUILD_DIR)/nucleus-$(ARCH).elf
+OS_ISO = $(DIST_DIR)/seren-$(ARCH).iso
 
-CFLAGS = -std=c11 $(INCLUDES) -Wall -Wextra -Werror -pedantic -O2 -g \
-	-ffreestanding -fno-stack-protector -fno-pie \
-	-mno-red-zone -mcmodel=kernel -mgeneral-regs-only \
-	-MMD -MP
+# --- Compiler and Linker Flags
 
-ASFLAGS = -f elf64 -g
+INCLUDES_BASE = -I$(INCLUDE_MAIN_DIR) \
+				-I$(INCLUDE_KERNEL_API_DIR) \
+				-I$(INCLUDE_DRIVERS_API_DIR) \
+				-I$(INCLUDE_LIB_API_DIR)
 
-LDFLAGS =  -T $(ROOT_DIR)/linker.ld -nostdlib -static -no-pie --no-dynamic-linker \
-	-z max-page-size=0x1000
+CFLAGS_COMMON = -std=c11 -Wall -Wextra -Werror -pedantic -O2 -g \
+		 -ffreestanding -fno-stack-protector -fno-pie \
+		 -mno-red-zone -mcmodel=kernel -mgeneral-regs-only \
+		 -MMD -MP
 
+ASFLAGS_COMMON = -g
+LDFLAGS_COMMON = -T $(ROOT_DIR)/linker-$(ARCH).ld -nostdlib -static -no-pie \
+				 --no-dynamic-linker -z max-page-size=0x1000
+
+# --- Architecture Specific Settings ---
+INCLUDES_ARCH = -I$(INCLUDE_ARCH_INTERNAL_DIR)
+
+ifeq ($(ARCH), x86_64)
+	ASFLAGS_ARCH = -f elf64
+else
+    $(error Unsupported architecture: $(ARCH))
+endif
+
+# Final flags
+CFLAGS = $(CFLAGS_COMMON) $(INCLUDES_BASE) $(INCLUDES_ARCH) $(CFLAGS_ARCH)
+ASFLAGS = $(ASFLAGS_COMMON) $(ASFLAGS_ARCH)
+LDFLAGS = $(LDFLAGS_COMMON) $(LDFLAGS_ARCH)
+
+# --- Limine Files ---
 LIMINE_BIOS_SYS_SRC ?= $(LIMINE_FILES_DIR)/limine-bios.sys
 LIMINE_BIOS_CD_SRC ?= $(LIMINE_FILES_DIR)/limine-bios-cd.bin
 ESSENTIAL_LIMINE_FILES = \
 	$(LIMINE_BIOS_SYS_SRC) \
 	$(LIMINE_BIOS_CD_SRC)
 
-.PHONY: all clean iso run $(FONT_PSF_OBJ)
+# --- Build Rules ---
+.PHONY: all clean iso run qemu_debug directories fetch-limine check-limine-files
 
 all: $(KERNEL_ELF)
+	echo $(OBJECTS)
 
 directories:
+	@echo "Creating directories for $(ARCH)..."
 	@mkdir -p $(OBJ_DIR) $(BUILD_DIR) $(DIST_DIR) $(ISO_ROOT_DIR)
-	@mkdir -p $(patsubst %/,%,$(sort $(dir $(OBJECTS))))
-
-$(KERNEL_ELF): $(OBJECTS) $(ROOT_DIR)/linker.ld | directories
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS)
-
-$(OBJ_DIR)/%.o: $(ROOT_DIR)/%.c Makefile $(wildcard $(dir $<)*.h) $(wildcard $(INCLUDE_DIR)/*.h) $(wildcard $(INCLUDE_DIR)/nucleus/*.h) $(wildcard $(LIBC_DIR)/include/*.h) | directories
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OBJ_DIR)/%.o: $(ROOT_DIR)/%.s Makefile | directories
-	$(AS) $(ASFLAGS) $< -o $@
+	@$(foreach dir, $(sort $(dir $(OBJECTS))), mkdir -p $(dir);)
 
 $(FONT_PSF_OBJ): $(FONT_PSF_SRC) | directories
-	$(OBJCOPY) -I binary -O elf64-x86-64 $< $@
+	@echo "OBJCOPY [$(ARCH)] $< -> $@"
+	@mkdir -p $(dir $@)
+	$(OBJCOPY) -I binary -O elf64-$(ARCH_TRIPLET) $< $@
+
+$(KERNEL_ELF): $(OBJECTS) $(ROOT_DIR)/linker-$(ARCH).ld | directories
+	echo "LD   [$(ARCH)] $@"
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS)
+
+$(OBJ_DIR)/%.o: ./%.c Makefile | directories
+	@echo "CC   [$(ARCH)] $<"
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/%.o: ./%.s Makefile | directories
+	@echo "AS   [$(ARCH)] $<"
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) $< -o $@
+
+$(OBJ_DIR)/%.o: ./%.S Makefile | directories
+	@echo "AS   [$(ARCH)] $<"
+	@mkdir -p $(dir $@)
+	$(AS) $(ASFLAGS) $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) $(DIST_DIR)
+	@echo "CLEAN"
+	rm -rf $(BUILD_DIR)/obj/$(ARCH) $(BUILD_DIR)/nucleus-$(ARCH).elf $(DIST_DIR)
 
 iso: $(KERNEL_ELF) $(ROOT_DIR)/limine.conf check-limine-files | directories
-	@echo "--> Preparing files for ISO image..."
+	@echo "--> Preparing files for ISO image [$(ARCH)]..."
 	cp $(KERNEL_ELF) $(ISO_ROOT_DIR)/nucleus.elf
 	cp $(ROOT_DIR)/limine.conf $(ISO_ROOT_DIR)/limine.conf
 
@@ -101,9 +168,18 @@ iso: $(KERNEL_ELF) $(ROOT_DIR)/limine.conf check-limine-files | directories
 	
 	@echo "--> ISO image created successfully: $(OS_ISO)"
 
-QEMU_FLAGS = -m 256M
+# --- QEMU Execution ---
+QEMU_FLAGS_COMMON = -m 512M
 
-.PHONY: fetch-limine
+QEMU_FLAGS = $($(QEMU_FLAGS_$(ARCH))) $(QEMU_FLAGS_COMMON)
+
+run: iso
+	$(QEMU) $(QEMU_FLAGS) -cdrom $(OS_ISO)
+
+qemu_debug: iso
+	$(QEMU) $(QEMU_FLAGS) -cdrom $(OS_ISO) -s -S
+
+# --- Limine Fetcing ---
 fetch-limine:
 	@if [ ! -d "$(LIMINE_FILES_DIR)" ]; then mkdir -p $(LIMINE_FILES_DIR); fi
 	@sh tools/fetch_limine.sh
@@ -134,11 +210,5 @@ check-limine-files:
 	else \
 	    echo "--> All essential Limine files found."; \
 	fi
-
-run: iso
-	$(QEMU) $(QEMU_FLAGS) -cdrom $(OS_ISO)
-
-qemu_debug: iso
-	$(QEMU) $(QEMU_FLAGS) -cdrom $(OS_ISO) -s -S
 
 -include $(DEPS)
