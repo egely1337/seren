@@ -1,3 +1,4 @@
+#include <drivers/keyboard.h>
 #include <drivers/pic.h>
 #include <limine.h>
 #include <nucleus/console.h>
@@ -22,13 +23,6 @@ __attribute__((used,
 __attribute__((
     used, section(".limine_requests"))) volatile struct limine_memmap_request
     memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 0};
-
-static void test_keyboard_handler(irq_context_t *context
-                                  __attribute__((unused))) {
-    uint8_t scancode = inb(0x60);
-    printk(KERN_INFO "Keyboard press! Vector: %lu, Scancode: 0x%x\n",
-           context->vector_number, scancode);
-}
 
 void kmain(void) {
     console_init();
@@ -58,8 +52,10 @@ void kmain(void) {
         printk(KERN_EMERG "Failed to allocate pages for kernel heap!\n");
     }
 
-    interrupt_register_irq_handler(1, test_keyboard_handler);
     printk(KERN_INFO "Registered example Timer and Keyboard IRQ handlers.\n");
+
+    keyboard_init();
+    printk(KERN_INFO "Keyboard driver initialized.\n");
 
     pic_unmask_irq(1);
     printk(KERN_INFO "Unmasked Keyboard (IRQ1).\n");
@@ -67,15 +63,13 @@ void kmain(void) {
     printk(KERN_INFO "Enabling interrupts (STI).\n");
     __asm__ volatile("sti");
 
-    int i = 0;
-    while (1) {
-        printk("NUM: %d\n", i);
-        i++;
-    }
+    printk(KERN_INFO
+           "Initialization sequence complete. You can now type. See you <3\n");
 
-    printk(
-        KERN_INFO
-        "Initialization sequence complete. Entering halt loop. See you <3\n");
+    while (1) {
+        char c = keyboard_getchar();
+        console_putchar(c);
+    }
 
     goto halt_loop;
 
