@@ -67,6 +67,12 @@ void kmain(void) {
     printk(KERN_INFO "Enabling interrupts (STI).\n");
     __asm__ volatile("sti");
 
+    int i = 0;
+    while (1) {
+        printk("NUM: %d\n", i);
+        i++;
+    }
+
     printk(
         KERN_INFO
         "Initialization sequence complete. Entering halt loop. See you <3\n");

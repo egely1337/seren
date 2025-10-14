@@ -2,6 +2,7 @@
 #include <limine.h>
 #include <nucleus/console.h>
 #include <nucleus/font.h>
+#include <nucleus/string.h>
 
 #define CONSOLE_READY  (console_initialized && fb && fb->address)
 #define TAB_STOP_WIDTH 4
@@ -148,9 +149,41 @@ void console_clear(void) {
     cursor_y = 0;
 }
 
+void console_scroll(void) {
+    if (!console_initialized_flag || screen_rows <= 1) {
+        return;
+    }
+
+    unsigned int char_height = font_get_char_height(&active_font);
+    size_t line_size_bytes = active_gfx_device.pitch * char_height;
+
+    size_t scroll_size_bytes = line_size_bytes * (screen_rows - 1);
+
+    void *dest = active_gfx_device.address;
+    void *src =
+        (void *)((uintptr_t)active_gfx_device.address + line_size_bytes);
+
+    memmove(dest, src, scroll_size_bytes);
+
+    void *last_line_start =
+        (void *)((uintptr_t)active_gfx_device.address + scroll_size_bytes);
+
+    uint32_t *last_line_pixels = (uint32_t *)last_line_start;
+    size_t pixels_in_line = line_size_bytes / 4;
+
+    for (size_t i = 0; i < pixels_in_line; i++) {
+        last_line_pixels[i] = current_bg_color;
+    }
+}
+
 void console_putchar_colored(char c, uint32_t fg_color, uint32_t bg_color) {
     if (!console_initialized_flag) {
         return;
+    }
+
+    if (cursor_y >= (int)screen_rows) {
+        console_scroll();
+        cursor_y = screen_rows - 1;
     }
 
     switch (c) {
@@ -185,7 +218,7 @@ void console_putchar_colored(char c, uint32_t fg_color, uint32_t bg_color) {
         }
 
         if (cursor_y >= (int)screen_rows && screen_rows > 0) {
-            // TODO: SCROLL
+            console_scroll();
             cursor_y = screen_rows - 1;
         }
 
@@ -195,7 +228,7 @@ void console_putchar_colored(char c, uint32_t fg_color, uint32_t bg_color) {
     }
 
     if (cursor_y >= (int)screen_rows && screen_rows > 0) {
-        // TODO: SCROLL
+        console_scroll();
         cursor_y = screen_rows - 1;
     }
 }

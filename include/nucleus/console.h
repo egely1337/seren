@@ -30,6 +30,11 @@ void console_init(void);
 void console_clear(void);
 
 /**
+ * @brief Scrolls the console.
+ */
+void console_scroll();
+
+/**
  * @brief Writes a single character onto the screen.
  *
  * This is for printing one character at a time. It'll use the
