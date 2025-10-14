@@ -120,15 +120,15 @@ void *kmalloc(size_t size) {
                     g_free_list_head = current->next_free;
                 }
             }
+
+            void *user_ptr = (void *)((uintptr_t)current + HEADER_SIZE);
+
+            return user_ptr;
         }
 
-        void *user_ptr = (void *)((uintptr_t)current + HEADER_SIZE);
-
-        return user_ptr;
+        prev_free = current;
+        current = current->next_free;
     }
-
-    prev_free = current;
-    current = current->next_free;
 
     printk(KERN_WARN "KHEAP: kmalloc failed to find a suitable free block for "
                      "size %u (aligned %u).\n",

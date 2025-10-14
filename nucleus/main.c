@@ -51,15 +51,6 @@ void kmain(void) {
 
         if (kheap_init(heap_start_virt, KHEAP_INITIAL_PAGES * PAGE_SIZE) == 0) {
             printk(KERN_INFO "Kernel heap initialized successfully.\n");
-
-            char *my_string = (char *)kmalloc(100);
-            if (my_string) {
-                strcpy(my_string, "Hello from kheap!");
-                printk(KERN_INFO "kmalloc test: %s\n", my_string);
-                kfree(my_string);
-            } else {
-                printk(KERN_WARN "kmalloc test failed!\n");
-            }
         } else {
             printk(KERN_EMERG "Failed to initialize kernel heap!\n");
         }
