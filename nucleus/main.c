@@ -2,7 +2,6 @@
 #include <drivers/input/keyboard.h>
 #include <limine.h>
 #include <nucleus/interrupt.h>
-#include <nucleus/mm/kheap.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/printk.h>
 #include <nucleus/tty/console.h>
@@ -38,12 +37,10 @@ void kmain(void) {
     pic_unmask_irq(1);
     pr_info("Unmasked Keyboard (IRQ1).\n");
 
-    printk(KERN_INFO
-           "Enabling interrupts (STI).\n"); // This is also arch-specific
-    __asm__ volatile("sti");
+    pr_info("Enabling interrupts\n");
+    interrupts_enable();
 
-    printk(KERN_INFO
-           "Initialization sequence complete. You can now type. See you <3\n");
+    pr_info("Initialization sequence complete. You can now type. See you <3\n");
 
     while (1) {
         char c = keyboard_getchar();

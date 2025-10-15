@@ -1,3 +1,4 @@
+#include <nucleus/interrupt.h>
 #include <nucleus/panic.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
@@ -29,7 +30,7 @@ static void print_registers(irq_context_t *context) {
 }
 
 void panic(const char *message, irq_context_t *context) {
-    __asm__ volatile("cli");
+    interrupts_disable();
 
     pr_emerg("==============================================================="
              "=======\n");

@@ -93,7 +93,12 @@ char keyboard_getchar(void) {
         __asm__ volatile("hlt");
     }
 
+    uint64_t flags = interrupt_save_and_disable();
+
     char c = g_kbd_buffer[g_kbd_buffer_tail];
     g_kbd_buffer_tail = (g_kbd_buffer_tail + 1) % KBD_BUFFER_SIZE;
+
+    interrupt_restore(flags);
+
     return c;
 }
