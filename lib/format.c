@@ -1,6 +1,6 @@
 #include <lib/format.h>
-#include <nucleus/types.h>
 #include <lib/stdarg.h>
+#include <nucleus/types.h>
 
 char *itoa_k(long long value, char *str, int base, int is_signed, int min_width,
              char pad_char) {
@@ -218,4 +218,12 @@ ensure_null_term:
     // remaining_size becomes 1, *buf is where '\0' goes.
 
     return written_count;
+}
+
+int ksnprintf(char *buf, size_t size, const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int count = kvsnprintf(buf, size, fmt, args);
+    va_end(args);
+    return count;
 }

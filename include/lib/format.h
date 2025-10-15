@@ -44,4 +44,9 @@ char *itoa_k(long long value, char *str, int base, int is_signed, int min_width,
  */
 int kvsnprintf(char *buf, size_t size, const char *fmt, va_list args);
 
+/**
+ * @brief Kernel-level snprintf: formats a string int o a buffer.
+ */
+int ksnprintf(char *buf, size_t size, const char *fmt, ...);
+
 #endif

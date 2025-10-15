@@ -7,7 +7,6 @@
 #include <nucleus/printk.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/types.h>
-#include <pic.h> // we include it for now
 
 __attribute__((
     used,

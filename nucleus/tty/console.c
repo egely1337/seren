@@ -1,4 +1,6 @@
+#include <drivers/timer.h>
 #include <drivers/video/gfx.h>
+#include <lib/format.h>
 #include <lib/string.h>
 #include <limine.h>
 #include <nucleus/tty/console.h>
@@ -254,6 +256,18 @@ void console_reset_fg_color(void) {
 void console_log(int level, const char *message) {
     if (!console_initialized_flag)
         return;
+
+    uint64_t uptime_ms = timer_get_uptime_ms();
+    uint64_t seconds = uptime_ms / 1000;
+    uint64_t milliseconds = uptime_ms % 1000;
+
+    char time_buf[16];
+
+    ksnprintf(time_buf, sizeof(time_buf), "[%5lu.%03lu] ", seconds,
+              milliseconds);
+
+    console_reset_fg_color();
+    console_writestring(time_buf);
 
     const char *prefix_text = NULL;
     uint32_t prefix_color = CONSOLE_DEFAULT_FG_COLOR;

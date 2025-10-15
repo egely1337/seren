@@ -27,3 +27,5 @@ void timer_init(void) {
     interrupt_register_irq_handler(TIMER_IRQ, (irq_c_handler_t)timer_handler);
     pit_info("initialized with %u Hz frequency\n", frequency);
 }
+
+uint64_t timer_get_uptime_ms(void) { return g_system_ticks * 10; }
