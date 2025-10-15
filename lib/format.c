@@ -1,6 +1,6 @@
 #include <nucleus/format.h>
+#include <nucleus/types.h>
 #include <stdarg.h>
-#include <stddef.h>
 
 char *itoa_k(long long value, char *str, int base, int is_signed, int min_width,
              char pad_char) {

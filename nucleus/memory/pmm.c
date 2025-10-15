@@ -2,8 +2,7 @@
 #include <nucleus/config.h>
 #include <nucleus/memory/pmm.h>
 #include <nucleus/printk.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <nucleus/types.h>
 
 // --- PMM Internal State ---
 // These keep track of our physical memory.

@@ -1,6 +1,5 @@
 #include <nucleus/font.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <nucleus/types.h>
 
 /**
  * PSF1 Font Specifics

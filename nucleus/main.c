@@ -9,7 +9,7 @@
 #include <nucleus/memory/pmm.h>
 #include <nucleus/printk.h>
 #include <nucleus/string.h>
-#include <stddef.h>
+#include <nucleus/types.h>
 
 __attribute__((
     used,

@@ -2,8 +2,7 @@
 #include <nucleus/memory/pmm.h>
 #include <nucleus/printk.h>
 #include <nucleus/string.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include <nucleus/types.h>
 
 #define HEAP_ALIGNMENT sizeof(void *)
 
