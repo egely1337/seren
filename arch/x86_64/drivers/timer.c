@@ -1,18 +1,29 @@
 #include <drivers/timer.h>
-#include <nucleus/interrupt.h>
 #include <io.h>
+#include <nucleus/interrupt.h>
 #include <nucleus/printk.h>
+#include <pic.h>
+
+#define PIT_PFX "pit: "
+
+#define pit_info(fmt, ...) pr_info(PIT_PFX fmt, ##__VA_ARGS__)
+
+static volatile uint64_t g_system_ticks = 0;
 
 void timer_handler(void) {
-    
+    g_system_ticks++;
+    pic_send_eoi(0);
 }
 
 void timer_init(void) {
-    /* Initialize timer here */
-    interrupt_register_irq_handler(TIMER_IRQ, (irq_c_handler_t)timer_handler);
+    uint32_t frequency = 100; // 100 Hz
+    uint16_t divisor = TIMER_FREQUENCY / frequency;
 
-    uint16_t divisior = TIMER_FREQUENCY / 100;
     outb(0x43, 0x36);
-    outb(0x40, (uint16_t)divisior & 0xFFFF);
-    outb(0x40, (uint16_t)(divisior >> 16));
+
+    outb(0x40, (uint8_t)divisor & 0xFF);
+    outb(0x40, (uint8_t)(divisor >> 8) & 0xFF);
+
+    interrupt_register_irq_handler(TIMER_IRQ, (irq_c_handler_t)timer_handler);
+    pit_info("initialized with %u Hz frequency\n", frequency);
 }
