@@ -1,6 +1,6 @@
 #include <limine.h>
 #include <nucleus/config.h>
-#include <nucleus/memory/pmm.h>
+#include <nucleus/mm/pmm.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
 

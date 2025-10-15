@@ -1,6 +1,6 @@
-#include <nucleus/console.h>
+#include <io.h>
 #include <nucleus/interrupt.h>
-#include <nucleus/io.h>
+#include <nucleus/tty/console.h>
 #include <stdbool.h>
 #include <stdint.h>
 

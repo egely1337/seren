@@ -1,7 +1,7 @@
-#include <drivers/pic.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
+#include <pic.h>
 
 // This is our array of function pointers. Think of it as a dispatch table.
 // When an IRQ (0-15) comes in, we'll look up the corresponding function

@@ -1,7 +1,7 @@
-#include <drivers/pic.h>
-#include <nucleus/idt.h>
+#include <idt.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
+#include <pic.h>
 
 static idt_entry_t idt[IDT_MAX_DESCRIPTORS];
 static idt_ptr_t idtp;

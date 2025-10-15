@@ -1,15 +1,14 @@
-#include <drivers/keyboard.h>
-#include <drivers/pic.h>
+#include <arch.h>
+#include <drivers/input/keyboard.h>
+#include <lib/string.h>
 #include <limine.h>
-#include <nucleus/console.h>
-#include <nucleus/idt.h>
 #include <nucleus/interrupt.h>
-#include <nucleus/io.h>
-#include <nucleus/memory/kheap.h>
-#include <nucleus/memory/pmm.h>
+#include <nucleus/mm/kheap.h>
+#include <nucleus/mm/pmm.h>
 #include <nucleus/printk.h>
-#include <nucleus/string.h>
+#include <nucleus/tty/console.h>
 #include <nucleus/types.h>
+#include <pic.h> // we include it for now
 
 __attribute__((
     used,
@@ -29,11 +28,7 @@ void kmain(void) {
     printk(KERN_INFO "Seren OS - Nucleus Kernel Booting...\n");
     printk(KERN_INFO "LFB GFX, PSF Font, Console Initialized.\n");
 
-    idt_init();
-    printk(KERN_INFO "IDT Initialized and Loaded.\n");
-
-    pic_remap_and_init();
-    printk(KERN_INFO "PICs remapped and initialized.\n");
+    arch_init();
 
     pmm_init(&memmap_request);
 
@@ -57,10 +52,12 @@ void kmain(void) {
     keyboard_init();
     printk(KERN_INFO "Keyboard driver initialized.\n");
 
+    // TODO: Move this behind an arch-independent API
     pic_unmask_irq(1);
     printk(KERN_INFO "Unmasked Keyboard (IRQ1).\n");
 
-    printk(KERN_INFO "Enabling interrupts (STI).\n");
+    printk(KERN_INFO
+           "Enabling interrupts (STI).\n"); // This is also arch-specific
     __asm__ volatile("sti");
 
     printk(KERN_INFO
@@ -69,12 +66,5 @@ void kmain(void) {
     while (1) {
         char c = keyboard_getchar();
         console_putchar(c);
-    }
-
-    goto halt_loop;
-
-halt_loop:
-    while (1) {
-        __asm__ volatile("hlt");
     }
 }

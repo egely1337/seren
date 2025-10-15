@@ -1,4 +1,4 @@
-#include <drivers/gfx.h>
+#include <drivers/video/gfx.h>
 #include <limine.h>
 #include <stddef.h>
 

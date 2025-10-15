@@ -1,6 +1,6 @@
-#include <nucleus/console.h>
-#include <nucleus/format.h>
+#include <lib/format.h>
 #include <nucleus/printk.h>
+#include <nucleus/tty/console.h>
 #include <stdarg.h>
 
 #define PRINTK_BUFFER_SIZE     256

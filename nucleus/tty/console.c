@@ -1,8 +1,8 @@
-#include <drivers/gfx.h>
+#include <drivers/video/gfx.h>
+#include <lib/string.h>
 #include <limine.h>
-#include <nucleus/console.h>
-#include <nucleus/font.h>
-#include <nucleus/string.h>
+#include <nucleus/tty/console.h>
+#include <nucleus/tty/font.h>
 
 #define CONSOLE_READY  (console_initialized && fb && fb->address)
 #define TAB_STOP_WIDTH 4

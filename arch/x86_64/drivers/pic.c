@@ -1,6 +1,6 @@
-#include <drivers/pic.h>
-#include <nucleus/io.h>
+#include <io.h>
 #include <nucleus/printk.h>
+#include <pic.h>
 
 #define ICW1_INIT         0x10
 #define ICW1_ICW4_NEEDED  0x01

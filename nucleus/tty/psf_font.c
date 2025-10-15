@@ -1,4 +1,4 @@
-#include <nucleus/font.h>
+#include <nucleus/tty/font.h>
 #include <nucleus/types.h>
 
 /**
