@@ -4,7 +4,7 @@
 #include <nucleus/printk.h>
 
 void timer_handler(void) {
-    printk("Hello, World!\n");
+    pr_info("hello world\n");
 }
 
 void timer_init(void) {
