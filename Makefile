@@ -10,10 +10,10 @@ endif
 
 # --- Toolchain Configuration ---
 TARGET_TRIPLET ?= $(ARCH)-elf
-CC = gcc
+CC = $(TARGET_TRIPLET)-gcc
 AS = nasm
-LD = ld
-OBJCOPY = objcopy
+LD = $(TARGET_TRIPLET)-ld
+OBJCOPY = $(TARGET_TRIPLET)-objcopy
 QEMU = qemu-system-$(ARCH)
 
 # --- Directory Structure ---
