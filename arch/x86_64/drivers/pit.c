@@ -1,4 +1,4 @@
-#include <drivers/timer.h>
+#include <drivers/pit.h>
 #include <io.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/printk.h>

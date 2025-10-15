@@ -1,6 +1,7 @@
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef PIT_H
+#define PIT_H
 
+#include <nucleus/interrupt.h>
 #include <nucleus/types.h>
 
 #define TIMER_IRQ       (uint8_t)0

@@ -1,12 +1,33 @@
 #include <arch.h>
 #include <drivers/input/keyboard.h>
-#include <drivers/timer.h>
+#include <drivers/pit.h>
 #include <limine.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/printk.h>
+#include <nucleus/sched/sched.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/types.h>
+
+void test_task_1(void) {
+    uint64_t my_counter = 0;
+    while (1) {
+        pr_info("TASK 1 COUNT %lu\n", my_counter++);
+
+        for (volatile int i = 0; i < 30000000; i++)
+            ;
+    }
+}
+
+void test_task_2(void) {
+    uint64_t my_counter = 0;
+    while (1) {
+        pr_warn("--> TASK 2 COUNT %lu\n", my_counter++);
+
+        for (volatile int i = 0; i < 10000000; i++)
+            ;
+    }
+}
 
 __attribute__((
     used,
@@ -43,12 +64,16 @@ void kmain(void) {
     irq_unmask(0);
     pr_info("Unmasked Timer (IRQ0).\n");
 
+    sched_init();
+
+    create_task("test_task_1", test_task_1);
+    create_task("test_task_2", test_task_2);
+
     interrupts_enable();
 
     pr_info("Initialization sequence complete. You can now type. See you <3\n");
 
     while (1) {
-        char c = keyboard_getchar();
-        console_putchar(c);
+        __asm__ volatile("hlt");
     }
 }

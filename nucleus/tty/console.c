@@ -1,4 +1,4 @@
-#include <drivers/timer.h>
+#include <drivers/pit.h>
 #include <drivers/video/gfx.h>
 #include <lib/format.h>
 #include <lib/string.h>

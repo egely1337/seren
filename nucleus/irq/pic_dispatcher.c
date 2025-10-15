@@ -1,5 +1,6 @@
 #include <nucleus/interrupt.h>
 #include <nucleus/printk.h>
+#include <nucleus/sched/sched.h>
 #include <nucleus/types.h>
 #include <pic.h>
 
