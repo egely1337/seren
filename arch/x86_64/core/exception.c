@@ -1,3 +1,4 @@
+#include <nucleus/panic.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
 
@@ -36,38 +37,13 @@ const char *exception_messages[] = {"Divide by Zero Error",
                                     "SIMD Floating-Point Exception",
                                     "Virtualization Exception",
                                     "Control Protection Exception"};
-void exception_handler(interrupt_frame_t *frame) {
-    printk(KERN_EMERG "\n!! KERNEL EXCEPTION !!\n");
+void exception_handler(irq_context_t *frame) {
+    const char *message = "Unknown Exception";
 
-    if (frame->interrupt_number <
-            (sizeof(exception_messages) / sizeof(char *)) &&
-        exception_messages[frame->interrupt_number] != NULL) {
-        printk(KERN_EMERG "Exception (0x%x): %s\n", frame->interrupt_number,
-               (char *)exception_messages[frame->interrupt_number]);
-    } else {
-        printk(KERN_EMERG "Unknown Exception (0x%x)", frame->interrupt_number);
+    if (frame->vector_number < (sizeof(exception_messages) / sizeof(char *)) &&
+        exception_messages[frame->vector_number] != NULL) {
+        message = exception_messages[frame->vector_number];
     }
 
-    printk(KERN_CRIT "Registers:\n");
-    printk(KERN_CRIT "  RIP: %p  RSP: %p  RFLAGS: %p\n", (void *)frame->rip,
-           (void *)frame->rsp, (void *)frame->rflags);
-    printk(KERN_CRIT "  RAX: %p  RBX: %p  RCX: %p  RDX: %p\n",
-           (void *)frame->rax, (void *)frame->rbx, (void *)frame->rcx,
-           (void *)frame->rdx);
-    printk(KERN_CRIT "  RSI: %p  RDI: %p  RBP: %p\n", (void *)frame->rsi,
-           (void *)frame->rdi, (void *)frame->rbp);
-    printk(KERN_CRIT "  R8:  %p  R9:  %p  R10: %p  R11: %p\n",
-           (void *)frame->r8, (void *)frame->r9, (void *)frame->r10,
-           (void *)frame->r11);
-    printk(KERN_CRIT "  R12: %p  R13: %p  R14: %p  R15: %p\n",
-           (void *)frame->r12, (void *)frame->r13, (void *)frame->r14,
-           (void *)frame->r15);
-    printk(KERN_CRIT "  CS:  %p  SS:  %p\n", (void *)frame->cs,
-           (void *)frame->ss);
-
-    printk(KERN_EMERG "System halted.\n");
-
-    while (1) {
-        __asm__ volatile("cli; hlt");
-    }
+    panic(message, frame);
 }

@@ -1,6 +1,7 @@
 #include <limine.h>
 #include <nucleus/config.h>
 #include <nucleus/mm/pmm.h>
+#include <nucleus/panic.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
 
@@ -94,26 +95,19 @@ static int64_t bitmap_find_first_free_block(size_t num_pages) {
  */
 void pmm_init(volatile struct limine_memmap_request *memmap_request) {
     if (!memmap_request || !memmap_request->response) {
-        printk(KERN_EMERG
-               "PMM: CRITICAL - Limine memmap request or response is "
-               "NULL! Halting.\n");
-        while (1)
-            __asm__ volatile("hlt");
+        panic("PMM: Limine memmap request or response is NULL!", NULL);
     }
     if (!hhdm_request.response) {
-        printk(KERN_EMERG
-               "PMM: CRITICAL - Limine HHDM response is NULL! Halting.\n");
-        while (1)
-            __asm__ volatile("hlt");
+        panic("PMM: Limine HHDM response is NULL!", NULL);
     }
 
     struct limine_memmap_response *memmap = memmap_request->response;
     uint64_t hhdm_offset = hhdm_request.response->offset;
 
     pr_info("PMM: Initializing Physical Memory Manager...\n");
-    printk(KERN_DEBUG "PMM: HHDM virtual offset: 0x%p\n", (void *)hhdm_offset);
-    printk(KERN_DEBUG "PMM: Limine reported %u memory map entries.\n",
-           memmap->entry_count);
+    pr_debug("PMM: HHDM virtual offset: 0x%p\n", (void *)hhdm_offset);
+    pr_debug("PMM: Limine reported %u memory map entries.\n",
+             memmap->entry_count);
 
     // Step 1: Determine the highest physical address to manage.
     highest_phys_addr_managed = 0;
@@ -127,10 +121,7 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
         }
     }
     if (highest_phys_addr_managed == 0) {
-        printk(KERN_EMERG "PMM: CRITICAL - No usable or bootloader-reclaimable "
-                          "memory found!\n");
-        while (1)
-            __asm__ volatile("hlt");
+        panic("PMM: No usable or bootloader-reclaimable memory found.", NULL);
     }
     highest_phys_addr_managed =
         (highest_phys_addr_managed + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
@@ -138,10 +129,10 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
     if (total_pages_managed == 0 && highest_phys_addr_managed > 0)
         total_pages_managed = 1;
 
-    printk(KERN_DEBUG "PMM: Highest physical address to manage: 0x%p\n",
-           (void *)highest_phys_addr_managed);
-    printk(KERN_DEBUG "PMM: Total pages to be managed by bitmap: %lu\n",
-           total_pages_managed);
+    pr_debug("PMM: Highest physical address to manage: 0x%p\n",
+             (void *)highest_phys_addr_managed);
+    pr_debug("PMM: Total pages to be managed by bitmap: %lu\n",
+             total_pages_managed);
 
     // Step 2: Determine where our kernel image ends in physical memory.
     uint64_t kernel_phys_start = KERNEL_PHYSICAL_LOAD_ADDR;
@@ -152,9 +143,9 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
             if (entry->base <= kernel_phys_start &&
                 (entry->base + entry->length) > kernel_phys_start) {
                 kernel_phys_end = entry->base + entry->length;
-                printk(KERN_DEBUG "PMM: Kernel/Modules region from memmap: "
-                                  "base=0x%p, length=0x%x\n",
-                       (void *)entry->base, entry->length);
+                pr_debug("PMM: Kernel/Modules region from memmap: "
+                         "base=0x%p, length=0x%x\n",
+                         (void *)entry->base, entry->length);
                 break;
             }
         }
@@ -163,19 +154,17 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
         uintptr_t kernel_virtual_end_addr = (uintptr_t)_kernel_end;
         kernel_phys_end = KERNEL_PHYSICAL_LOAD_ADDR +
                           (kernel_virtual_end_addr - KERNEL_VIRTUAL_BASE);
-        printk(KERN_DEBUG
-               "PMM: Kernel/Modules region not definitive, kernel end "
-               "calculated from _kernel_end.\n");
+        pr_debug("PMM: Kernel/Modules region not definitive, kernel end "
+                 "calculated from _kernel_end.\n");
     }
     kernel_phys_end = (kernel_phys_end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-    printk(KERN_DEBUG
-           "PMM: Kernel physical footprint ends at (aligned): 0x%p\n",
-           (void *)kernel_phys_end);
+    pr_debug("PMM: Kernel physical footprint ends at (aligned): 0x%p\n",
+             (void *)kernel_phys_end);
 
     // Step 3: Calculate bitmap size and find a spot for it.
     size_t bitmap_size_bytes = (total_pages_managed + 7) / 8;
-    printk(KERN_DEBUG "PMM: Page bitmap will require: %u bytes (%u KiB)\n",
-           bitmap_size_bytes, bitmap_size_bytes / 1024);
+    pr_debug("PMM: Page bitmap will require: %u bytes (%u KiB)\n",
+             bitmap_size_bytes, bitmap_size_bytes / 1024);
     uint64_t bitmap_physical_addr = 0;
 
     for (uint64_t i = 0; i < memmap->entry_count; i++) {
@@ -197,23 +186,19 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
         }
     }
     if (bitmap_physical_addr == 0) {
-        printk(KERN_EMERG
-               "PMM: CRITICAL - Failed to find space for PMM bitmap!\n");
-        while (1)
-            __asm__ volatile("hlt");
+        panic("PMM: Failed to find space for PMM bitmap!", NULL);
     }
     page_bitmap = (uint8_t *)(hhdm_offset + bitmap_physical_addr);
-    printk(KERN_INFO
-           "PMM: Page bitmap will be at VMA 0x%p (maps to PMA 0x%p)\n",
-           page_bitmap, (void *)bitmap_physical_addr);
+    pr_info("PMM: Page bitmap will be at VMA 0x%p (maps to PMA 0x%p)\n",
+            page_bitmap, (void *)bitmap_physical_addr);
 
     // Step 4: Initialize bitmap and page counts
-    printk(KERN_DEBUG "PMM: Initializing bitmap to all free...\n");
+    pr_debug("PMM: Initializing bitmap to all free...\n");
     for (size_t k = 0; k < bitmap_size_bytes; k++) {
         page_bitmap[k] = 0x00;
     }
 
-    printk(KERN_DEBUG "PMM: Marking initially reserved/unusable regions...\n");
+    pr_debug("PMM: Marking initially reserved/unusable regions...\n");
     for (uint64_t page_idx = 0; page_idx < total_pages_managed; page_idx++) {
         uint64_t current_phys_addr = page_idx * PAGE_SIZE;
         int is_usable_or_reclaimable = 0;
@@ -236,9 +221,8 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
     uint64_t kernel_start_page_idx = kernel_phys_start / PAGE_SIZE;
     uint64_t kernel_num_pages =
         (kernel_phys_end - kernel_phys_start) / PAGE_SIZE;
-    printk(KERN_DEBUG
-           "PMM: Reserving kernel pages: start_idx=%lu, num_pages=%lu\n",
-           kernel_start_page_idx, kernel_num_pages);
+    pr_debug("PMM: Reserving kernel pages: start_idx=%lu, num_pages=%lu\n",
+             kernel_start_page_idx, kernel_num_pages);
     for (uint64_t k = 0; k < kernel_num_pages; k++) {
         bitmap_set_page(kernel_start_page_idx + k);
     }
@@ -246,9 +230,8 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
     uint64_t bitmap_start_page_idx = bitmap_physical_addr / PAGE_SIZE;
     uint64_t bitmap_num_pages_val =
         (bitmap_size_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
-    printk(KERN_DEBUG
-           "PMM: Reserving PMM bitmap pages: start_idx=%lu, num_pages=%lu\n",
-           bitmap_start_page_idx, bitmap_num_pages_val);
+    pr_debug("PMM: Reserving PMM bitmap pages: start_idx=%lu, num_pages=%lu\n",
+             bitmap_start_page_idx, bitmap_num_pages_val);
     for (uint64_t k = 0; k < bitmap_num_pages_val; k++) {
         bitmap_set_page(bitmap_start_page_idx + k);
     }
@@ -279,8 +262,8 @@ void *pmm_alloc_page(void) { return pmm_alloc_contiguous_pages(1); }
 
 void *pmm_alloc_contiguous_pages(size_t num_pages) {
     if (page_bitmap == NULL || num_pages == 0) {
-        printk(KERN_WARN "PMM: Alloc failed - PMM not initialized or zero "
-                         "pages requested.\n");
+        pr_warn("PMM: Alloc failed - PMM not initialized or zero "
+                "pages requested.\n");
         return NULL;
     }
 
@@ -320,9 +303,8 @@ void pmm_free_contiguous_pages(void *p_addr, size_t num_pages) {
 
     uint64_t physical_address = (uint64_t)p_addr;
     if (physical_address % PAGE_SIZE != 0) {
-        printk(KERN_WARN
-               "PMM: Attempted to free unaligned physical address %p\n",
-               p_addr);
+        pr_warn("PMM: Attempted to free unaligned physical address %p\n",
+                p_addr);
         return;
     }
 
@@ -333,9 +315,9 @@ void pmm_free_contiguous_pages(void *p_addr, size_t num_pages) {
     for (size_t i = 0; i < num_pages; i++) {
         uint64_t current_page_index = start_page_index + i;
         if (current_page_index >= total_pages_managed) {
-            printk(KERN_WARN
-                   "PMM: Attempted to free page index %u out of bounds (%u).\n",
-                   current_page_index, total_pages_managed);
+            pr_warn(
+                "PMM: Attempted to free page index %u out of bounds (%u).\n",
+                current_page_index, total_pages_managed);
             break;
         }
         if (!bitmap_is_page_used(current_page_index)) {

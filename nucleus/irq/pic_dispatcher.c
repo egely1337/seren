@@ -11,8 +11,8 @@ static irq_c_handler_t s_irq_c_routines[16] = {0};
 
 void interrupt_register_irq_handler(uint8_t irq_line, irq_c_handler_t handler) {
     if (irq_line < 16) {
-        printk(KERN_DEBUG "IRQ: Registering handler for IRQ line %u at %p\n",
-               irq_line, handler);
+        pr_debug("IRQ: Registering handler for IRQ line %u at %p\n", irq_line,
+                 handler);
         s_irq_c_routines[irq_line] = handler;
     } else {
         printk(KERN_WARN
@@ -23,8 +23,7 @@ void interrupt_register_irq_handler(uint8_t irq_line, irq_c_handler_t handler) {
 
 void interrupt_unregister_irq_handler(uint8_t irq_line) {
     if (irq_line < 16) {
-        printk(KERN_DEBUG "IRQ: Unregistering handler for IRQ line %u\n",
-               irq_line);
+        pr_debug("IRQ: Unregistering handler for IRQ line %u\n", irq_line);
         s_irq_c_routines[irq_line] = NULL;
     }
 }

@@ -27,8 +27,8 @@ void idt_init(void) {
     idtp.base = (uint64_t)&idt[0];
     idtp.limit = (uint16_t)(sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1);
 
-    printk(KERN_DEBUG "IDT: Initializing IDT at %p, limit 0x%x\n",
-           (void *)idtp.base, idtp.limit);
+    pr_debug("IDT: Initializing IDT at %p, limit 0x%x\n", (void *)idtp.base,
+             idtp.limit);
 
     for (int i = 0; i < IDT_MAX_DESCRIPTORS; i++) {
         idt_set_gate(i, 0, 0, 0, 0);

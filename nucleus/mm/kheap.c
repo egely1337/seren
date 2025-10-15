@@ -61,8 +61,8 @@ int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
         KERN_INFO
         "KHEAP: Heap initialized. Start: 0x%p, End: 0x%p, Size: %lu bytes.\n",
         (void *)g_heap_start_addr, (void *)g_heap_end_addr, g_heap_total_size);
-    printk(KERN_DEBUG "KHEAP: First free block created. Size: %lu bytes.\n",
-           g_free_list_head->size);
+    pr_debug("KHEAP: First free block created. Size: %lu bytes.\n",
+             g_free_list_head->size);
 
     return 0;
 }
@@ -170,7 +170,7 @@ void kfree(void *ptr) {
 
     // Try to coalesce with next physical block if it's free
     if (block_header->next_phys && block_header->next_phys->is_free) {
-        // printk(KERN_DEBUG "KHEAP: Coalescing block at %p with next block at
+        // pr_debug("KHEAP: Coalescing block at %p with next block at
         // %p\n", block_header, block_header->next_phys); Remove next_phys from
         // the free list (it's about to be merged)
         heap_block_header_t *curr_free = g_free_list_head;
@@ -205,7 +205,7 @@ void kfree(void *ptr) {
     block_header->next_free = g_free_list_head;
     g_free_list_head = block_header;
 
-    // printk(KERN_DEBUG "KHEAP: Freed block at %p (header %p), new size %u\n",
+    // pr_debug("KHEAP: Freed block at %p (header %p), new size %u\n",
     // ptr, block_header, block_header->size); spinlock_unlock(&kheap_lock);
 }
 
