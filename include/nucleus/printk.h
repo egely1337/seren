@@ -1,8 +1,7 @@
 #ifndef NUCLEUS_PRINTK_H
 #define NUCLEUS_PRINTK_H
 
-#include <stdarg.h>
-#include <stddef.h>
+#include <lib/stdarg.h>
 
 #define KERN_EMERG  "<0>" /* System is unusable */
 #define KERN_ALERT  "<1>" /* Action must be taken immediately */

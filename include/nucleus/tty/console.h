@@ -1,8 +1,8 @@
 #ifndef NUCLEUS_CONSOLE_H
 #define NUCLEUS_CONSOLE_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include <lib/stddef.h>
+#include <lib/stdint.h>
 
 /**
  * This is the main public header for Nucleus's console.

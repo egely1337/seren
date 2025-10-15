@@ -6,6 +6,7 @@
 #include <nucleus/printk.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/types.h>
+#include <drivers/timer.h>
 #include <pic.h> // we include it for now
 
 __attribute__((
@@ -33,12 +34,19 @@ void kmain(void) {
     keyboard_init();
     pr_info("Keyboard driver initialized.\n");
 
+    timer_init();
+    pr_info("Timer driver initialized.\n");
+
     // TODO: Move this behind an arch-independent API
     pic_unmask_irq(1);
     pr_info("Unmasked Keyboard (IRQ1).\n");
 
-    pr_info("Enabling interrupts\n");
-    interrupts_enable();
+    pic_unmask_irq(0);
+    pr_info("Unmasked Timer (IRQ0).\n");
+
+    printk(KERN_INFO
+           "Enabling interrupts (STI).\n"); // This is also arch-specific
+    sti();
 
     pr_info("Initialization sequence complete. You can now type. See you <3\n");
 

@@ -1,7 +1,7 @@
 #ifndef NUCLEUS_INTERRUPT_H
 #define NUCLEUS_INTERRUPT_H
 
-#include <stdint.h>
+#include <lib/stdint.h>
 
 typedef struct irq_context {
 

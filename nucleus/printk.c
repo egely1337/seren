@@ -2,7 +2,7 @@
 #include <nucleus/printk.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/types.h>
-#include <stdarg.h>
+#include <lib/stdarg.h>
 
 #define PRINTK_BUFFER_SIZE     256
 #define KERNEL_LOG_BUFFER_SIZE (4 * 1024)

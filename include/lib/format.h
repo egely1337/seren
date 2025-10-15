@@ -1,9 +1,9 @@
 #ifndef FORMAT_H
 #define FORMAT_H
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <lib/stdarg.h>
+#include <lib/stddef.h>
+#include <lib/stdint.h>
 
 /**
  * @brief Converts an integer to a null-terminated string.

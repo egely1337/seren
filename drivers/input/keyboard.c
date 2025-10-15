@@ -1,8 +1,8 @@
 #include <io.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/tty/console.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <lib/stdbool.h>
+#include <lib/stdint.h>
 
 #define SCANCODE_MAX 88
 
