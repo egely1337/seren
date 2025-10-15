@@ -31,6 +31,7 @@ int printk(const char *fmt, ...) {
     va_start(args, fmt);
     int count =
         kvsnprintf(temp_printk_buffer, PRINTK_BUFFER_SIZE, fmt_body, args);
+    va_end(args);
 
     if (count >= 0) {
         console_log(level, temp_printk_buffer);
