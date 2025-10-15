@@ -1,6 +1,5 @@
 #include <arch.h>
 #include <drivers/input/keyboard.h>
-#include <lib/string.h>
 #include <limine.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/mm/kheap.h>
@@ -25,8 +24,8 @@ __attribute__((
 
 void kmain(void) {
     console_init();
-    pr_info("Seren OS - Nucleus Kernel Booting...\n");
-    pr_info("LFB GFX, PSF Font, Console Initialized.\n");
+    pr_info("Seren OS booting...\n");
+    pr_info("LFB GFX, PSF Font, console initialized.\n");
 
     arch_init();
 

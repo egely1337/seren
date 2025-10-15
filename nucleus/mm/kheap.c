@@ -1,8 +1,16 @@
 #include <lib/string.h>
 #include <nucleus/mm/kheap.h>
 #include <nucleus/mm/pmm.h>
+#include <nucleus/panic.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
+
+#define KHEAP_PFX "kheap: "
+
+#define kheap_info(fmt, ...) pr_info(KHEAP_PFX fmt, ##__VA_ARGS__)
+#define kheap_warn(fmt, ...) pr_warn(KHEAP_PFX fmt, ##__VA_ARGS__)
+#define kheap_err(fmt, ...)  pr_err(KHEAP_PFX fmt, ##__VA_ARGS__)
+#define kheap_dbg(fmt, ...)  pr_debug(KHEAP_PFX fmt, ##__VA_ARGS__)
 
 #define HEAP_ALIGNMENT sizeof(void *)
 
@@ -27,11 +35,11 @@ static uintptr_t g_heap_end_addr = 0;
 static size_t g_heap_total_size = 0;
 
 int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
-    pr_info("KHEAP: Initializing kernel heap...\n");
+    kheap_info("initializing kernel heap.\n");
 
     if (!initial_pool_start ||
         initial_pool_size < (HEADER_SIZE + HEAP_ALIGNMENT)) {
-        printk(KERN_ERR "KHEAP: Initial pool is too small or NULL.\n");
+        kheap_err("initial pool is too small or NULL.");
         return -1;
     }
 
@@ -41,8 +49,7 @@ int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
 
     if (alignment_diff > initial_pool_size ||
         initial_pool_size - alignment_diff < (HEADER_SIZE + HEAP_ALIGNMENT)) {
-        printk(KERN_ERR
-               "KHEAP: Initial pool too small after aligning start address.\n");
+        kheap_err("initial pool is too small after aligning start address.\n");
         g_heap_start_addr = 0;
         return -1;
     }
@@ -57,34 +64,39 @@ int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
     g_free_list_head->prev_phys = NULL;
     g_free_list_head->next_phys = NULL;
 
-    printk(
-        KERN_INFO
-        "KHEAP: Heap initialized. Start: 0x%p, End: 0x%p, Size: %lu bytes.\n",
-        (void *)g_heap_start_addr, (void *)g_heap_end_addr, g_heap_total_size);
-    pr_debug("KHEAP: First free block created. Size: %lu bytes.\n",
-             g_free_list_head->size);
+    kheap_info("heap initialized at 0x%p, size: %lu KiB\n",
+               (void *)g_heap_start_addr, g_heap_total_size / 1024);
+    kheap_dbg("first free block created, size: %lu bytes.\n",
+              g_free_list_head->size);
 
     return 0;
 }
 
 void *kmalloc(size_t size) {
+    // TODO: Add a spinlock here for SMP safety
+
     if (size == 0) {
+        kheap_warn("kmalloc(0) called.\n");
         return NULL;
     }
 
     if (!g_free_list_head) {
-        printk(KERN_WARN "KHEAP: kmalloc called but heap not initialized or no "
-                         "free blocks!\n");
+        kheap_warn(
+            "kmalloc called before heap is initialized or heap is full.\n");
         return NULL;
     }
 
     size_t actual_data_size = align_up(size, HEAP_ALIGNMENT);
 
+    // Find first fit
     heap_block_header_t *current = g_free_list_head;
     heap_block_header_t *prev_free = NULL;
 
     while (current) {
         if (current->is_free && current->size >= actual_data_size) {
+            // Found a suitable block
+
+            // Check if we can split the block
             if (current->size >=
                 actual_data_size + HEADER_SIZE + HEAP_ALIGNMENT) {
                 heap_block_header_t *remaining_free_header =
@@ -121,7 +133,8 @@ void *kmalloc(size_t size) {
             }
 
             void *user_ptr = (void *)((uintptr_t)current + HEADER_SIZE);
-
+            kheap_dbg("allocated %lu bytes at %p\n", actual_data_size,
+                      user_ptr);
             return user_ptr;
         }
 
@@ -129,54 +142,35 @@ void *kmalloc(size_t size) {
         current = current->next_free;
     }
 
-    printk(KERN_WARN "KHEAP: kmalloc failed to find a suitable free block for "
-                     "size %u (aligned %u).\n",
-           size, actual_data_size);
+    kheap_warn("failed to find suitable block for size %lu (aligned %u).\n");
 
-    // TODO: Implement heap expansion by requesting more pages from PMM if we
-    // run out.
+    // TODO: Implement heap expansion.
     return NULL;
 }
 
 void kfree(void *ptr) {
     if (!ptr) {
-        return; // Nothing to free!
+        return; // kfree(NULL)
     }
 
-    // spinlock_lock(&kheap_lock);
+    // TODO: Add a spinlock here for SMP safety
 
-    // Get the header from the user pointer
-    heap_block_header_t *block_header =
+    heap_block_header_t *header =
         (heap_block_header_t *)((uintptr_t)ptr - HEADER_SIZE);
 
-    // Some sanity checks (optional, but good for debugging)
-    if (block_header->is_free) {
-        printk(KERN_ERR "KHEAP: Double free detected at %p (header %p)!\n", ptr,
-               block_header);
-        // spinlock_unlock(&kheap_lock);
-        // PANIC("Double free!");
+    if (header->is_free) {
+        panic(KHEAP_PFX "double free detected for pointer %p!\n", ptr);
         return;
     }
-    // Check if ptr is within heap bounds (g_heap_start_addr, g_heap_end_addr)
-    // Check magic number if using one
 
-    block_header->is_free = true;
+    header->is_free = true;
+    kheap_dbg("freed block at %p, size %lu\n", ptr, header->size);
 
-    // --- Simple Coalescing (merge with adjacent free blocks) ---
-    // This is a basic implementation. More robust coalescing would check both
-    // prev_phys and next_phys and update the free list carefully. For now,
-    // we'll just add it to the head of the free list. A better approach would
-    // be to keep the free list sorted by address for easier coalescing.
-
-    // Try to coalesce with next physical block if it's free
-    if (block_header->next_phys && block_header->next_phys->is_free) {
-        // pr_debug("KHEAP: Coalescing block at %p with next block at
-        // %p\n", block_header, block_header->next_phys); Remove next_phys from
-        // the free list (it's about to be merged)
+    if (header->next_phys && header->next_phys->is_free) {
         heap_block_header_t *curr_free = g_free_list_head;
         heap_block_header_t *prev_free = NULL;
         while (curr_free) {
-            if (curr_free == block_header->next_phys) {
+            if (curr_free == header->next_phys) {
                 if (prev_free)
                     prev_free->next_free = curr_free->next_free;
                 else
@@ -187,35 +181,23 @@ void kfree(void *ptr) {
             curr_free = curr_free->next_free;
         }
 
-        block_header->size += HEADER_SIZE + block_header->next_phys->size;
-        block_header->next_phys = block_header->next_phys->next_phys;
-        if (block_header->next_phys) {
-            block_header->next_phys->prev_phys = block_header;
+        header->size += HEADER_SIZE + header->next_phys->size;
+        header->next_phys = header->next_phys->next_phys;
+        if (header->next_phys) {
+            header->next_phys->prev_phys = header;
         }
     }
 
-    // Try to coalesce with previous physical block if it's free
-    // This requires finding block_header in the free list to remove it first if
-    // it was just added, then merging with prev_phys and re-adding prev_phys.
-    // For simplicity in this version, prev_phys coalescing is more complex if
-    // free list isn't address-ordered. We'll skip merging with previous for now
-    // to keep kfree simpler. A more advanced kfree would handle this.
-
-    // Add the (potentially coalesced) block to the head of the free list
-    block_header->next_free = g_free_list_head;
-    g_free_list_head = block_header;
-
-    // pr_debug("KHEAP: Freed block at %p (header %p), new size %u\n",
-    // ptr, block_header, block_header->size); spinlock_unlock(&kheap_lock);
+    header->next_free = g_free_list_head;
+    g_free_list_head = header;
 }
 
-void *kcalloc(size_t num, size_t element_size) {
-    size_t total_size = num * element_size;
-    // Check for overflow
-    if (element_size != 0 && total_size / element_size != num) {
-        printk(KERN_WARN "KHEAP: kcalloc multiplication overflow (num=%u, "
-                         "element_size=%u)\n",
-               num, element_size);
+void *kcalloc(size_t num, size_t size) {
+    size_t total_size = num * size;
+
+    if (size != 0 && total_size / size != num) {
+        kheap_warn("integer overflow detected in kcalloc(num=%lu, size=%lu)",
+                   num, size);
         return NULL;
     }
 

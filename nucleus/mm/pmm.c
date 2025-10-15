@@ -5,25 +5,23 @@
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
 
+#define PMM_PFX "pmm: "
+
+#define pmm_info(fmt, ...) pr_info(PMM_PFX fmt, ##__VA_ARGS__)
+#define pmm_warn(fmt, ...) pr_warn(PMM_PFX fmt, ##__VA_ARGS__)
+#define pmm_dbg(fmt, ...)  pr_debug(PMM_PFX fmt, ##__VA_ARGS__)
+
 // --- PMM Internal State ---
-// These keep track of our physical memory.
-static uint8_t *page_bitmap =
-    NULL; // Our big map of all pages: 0 for free, 1 for used
-static uint64_t total_pages_managed =
-    0; // How many pages in total we are keeping an eye
-static uint64_t highest_phys_addr_managed =
-    0; // The top physical address our bitmap covers
-static uint64_t free_pages_count =
-    0; // How many pages are currently free for allocation
-static uint64_t used_pages_count = 0; // How many pages are currently in use
+static uint8_t *page_bitmap = NULL;
+static uint64_t total_pages_managed = 0;
+static uint64_t highest_phys_addr_managed = 0;
+static uint64_t free_pages_count = 0;
+static uint64_t used_pages_count = 0;
 
 extern volatile struct limine_hhdm_request hhdm_request;
 
 // Linker-defined symbol for the end of the kernel image (VMA)
 extern char _kernel_end[];
-
-// --- Bitmap Helper Functions ---
-// Little helpers to play with the bits in our page_bitmap.
 
 /**
  * @brief Marks a page as used in the bitmap (sets the bit).
@@ -95,19 +93,17 @@ static int64_t bitmap_find_first_free_block(size_t num_pages) {
  */
 void pmm_init(volatile struct limine_memmap_request *memmap_request) {
     if (!memmap_request || !memmap_request->response) {
-        panic("PMM: Limine memmap request or response is NULL!", NULL);
+        panic(PMM_PFX "Limine memmap request or response is NULL!", NULL);
     }
     if (!hhdm_request.response) {
-        panic("PMM: Limine HHDM response is NULL!", NULL);
+        panic(PMM_PFX "Limine HHDM response is NULL!", NULL);
     }
 
     struct limine_memmap_response *memmap = memmap_request->response;
     uint64_t hhdm_offset = hhdm_request.response->offset;
 
-    pr_info("PMM: Initializing Physical Memory Manager...\n");
-    pr_debug("PMM: HHDM virtual offset: 0x%p\n", (void *)hhdm_offset);
-    pr_debug("PMM: Limine reported %u memory map entries.\n",
-             memmap->entry_count);
+    pmm_dbg("HHDM virtual offset: 0x%lx\n", hhdm_offset);
+    pmm_dbg("Limine reported %lu memory map entries.\n", memmap->entry_count);
 
     // Step 1: Determine the highest physical address to manage.
     highest_phys_addr_managed = 0;
@@ -121,7 +117,8 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
         }
     }
     if (highest_phys_addr_managed == 0) {
-        panic("PMM: No usable or bootloader-reclaimable memory found.", NULL);
+        panic(PMM_PFX "no usable or bootloader-reclaimable memory found.",
+              NULL);
     }
     highest_phys_addr_managed =
         (highest_phys_addr_managed + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
@@ -129,10 +126,9 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
     if (total_pages_managed == 0 && highest_phys_addr_managed > 0)
         total_pages_managed = 1;
 
-    pr_debug("PMM: Highest physical address to manage: 0x%p\n",
-             (void *)highest_phys_addr_managed);
-    pr_debug("PMM: Total pages to be managed by bitmap: %lu\n",
-             total_pages_managed);
+    pmm_dbg("highest physical address found: 0x%lx\n",
+            highest_phys_addr_managed);
+    pmm_dbg("total pages to manage: %lu\n", total_pages_managed);
 
     // Step 2: Determine where our kernel image ends in physical memory.
     uint64_t kernel_phys_start = KERNEL_PHYSICAL_LOAD_ADDR;
@@ -143,9 +139,8 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
             if (entry->base <= kernel_phys_start &&
                 (entry->base + entry->length) > kernel_phys_start) {
                 kernel_phys_end = entry->base + entry->length;
-                pr_debug("PMM: Kernel/Modules region from memmap: "
-                         "base=0x%p, length=0x%x\n",
-                         (void *)entry->base, entry->length);
+                pmm_dbg("kernel region from memmap: base=0x%lx, length=0x%lx\n",
+                        entry->base, entry->length);
                 break;
             }
         }
@@ -154,17 +149,17 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
         uintptr_t kernel_virtual_end_addr = (uintptr_t)_kernel_end;
         kernel_phys_end = KERNEL_PHYSICAL_LOAD_ADDR +
                           (kernel_virtual_end_addr - KERNEL_VIRTUAL_BASE);
-        pr_debug("PMM: Kernel/Modules region not definitive, kernel end "
-                 "calculated from _kernel_end.\n");
+        pmm_warn("could not find definitive kernel region in memmap, "
+                 "calculating from linker symbols.\n");
     }
     kernel_phys_end = (kernel_phys_end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-    pr_debug("PMM: Kernel physical footprint ends at (aligned): 0x%p\n",
-             (void *)kernel_phys_end);
+    pmm_dbg("kernel physical footprint ends at (aligned): 0x%lx\n",
+            kernel_phys_end);
 
     // Step 3: Calculate bitmap size and find a spot for it.
     size_t bitmap_size_bytes = (total_pages_managed + 7) / 8;
-    pr_debug("PMM: Page bitmap will require: %u bytes (%u KiB)\n",
-             bitmap_size_bytes, bitmap_size_bytes / 1024);
+    pmm_dbg("bitmap requires %u bytes (%u KiB)\n", bitmap_size_bytes,
+            bitmap_size_bytes / 1024);
     uint64_t bitmap_physical_addr = 0;
 
     for (uint64_t i = 0; i < memmap->entry_count; i++) {
@@ -186,19 +181,18 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
         }
     }
     if (bitmap_physical_addr == 0) {
-        panic("PMM: Failed to find space for PMM bitmap!", NULL);
+        panic(PMM_PFX "failed to find a suitable memory region for the bitmap!",
+              NULL);
     }
     page_bitmap = (uint8_t *)(hhdm_offset + bitmap_physical_addr);
-    pr_info("PMM: Page bitmap will be at VMA 0x%p (maps to PMA 0x%p)\n",
-            page_bitmap, (void *)bitmap_physical_addr);
+    pmm_info("bitmap placed at physical 0x%lx (virtual 0x%p)\n",
+             (void *)bitmap_physical_addr, page_bitmap);
 
     // Step 4: Initialize bitmap and page counts
-    pr_debug("PMM: Initializing bitmap to all free...\n");
     for (size_t k = 0; k < bitmap_size_bytes; k++) {
         page_bitmap[k] = 0x00;
     }
 
-    pr_debug("PMM: Marking initially reserved/unusable regions...\n");
     for (uint64_t page_idx = 0; page_idx < total_pages_managed; page_idx++) {
         uint64_t current_phys_addr = page_idx * PAGE_SIZE;
         int is_usable_or_reclaimable = 0;
@@ -221,20 +215,19 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
     uint64_t kernel_start_page_idx = kernel_phys_start / PAGE_SIZE;
     uint64_t kernel_num_pages =
         (kernel_phys_end - kernel_phys_start) / PAGE_SIZE;
-    pr_debug("PMM: Reserving kernel pages: start_idx=%lu, num_pages=%lu\n",
-             kernel_start_page_idx, kernel_num_pages);
     for (uint64_t k = 0; k < kernel_num_pages; k++) {
         bitmap_set_page(kernel_start_page_idx + k);
     }
+    pmm_dbg("reserved %lu pages for the kernel.\n", kernel_num_pages);
 
     uint64_t bitmap_start_page_idx = bitmap_physical_addr / PAGE_SIZE;
     uint64_t bitmap_num_pages_val =
         (bitmap_size_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
-    pr_debug("PMM: Reserving PMM bitmap pages: start_idx=%lu, num_pages=%lu\n",
-             bitmap_start_page_idx, bitmap_num_pages_val);
     for (uint64_t k = 0; k < bitmap_num_pages_val; k++) {
         bitmap_set_page(bitmap_start_page_idx + k);
     }
+    pmm_dbg("reserved %lu pages for the PMM bitmap itself.\n",
+            bitmap_num_pages_val);
 
     free_pages_count = 0;
     used_pages_count = 0;
@@ -246,14 +239,11 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
         }
     }
 
-    pr_info("PMM: Initialization complete.\n");
-    pr_info("PMM: Total managed: %lu MiB (%lu pages)\n",
-            (total_pages_managed * PAGE_SIZE) / (1024 * 1024),
-            total_pages_managed);
-    pr_info("PMM: Usable free: %lu MiB (%lu pages)\n",
-            (free_pages_count * PAGE_SIZE) / (1024 * 1024), free_pages_count);
-    pr_info("PMM: Used: %lu KiB (%lu pages)\n",
-            (used_pages_count * PAGE_SIZE) / 1024, used_pages_count);
+    pmm_info("initialization complete.\n");
+    pmm_info("total RAM: %lu MiB, usable: %lu MiB, used: %lu KiB\n",
+             (total_pages_managed * PAGE_SIZE) / (1024 * 1024),
+             (free_pages_count * PAGE_SIZE) / (1024 * 1024),
+             (used_pages_count * PAGE_SIZE) / 1024);
 }
 
 // --- Allocation and Deallocation Functions ---
@@ -261,21 +251,27 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
 void *pmm_alloc_page(void) { return pmm_alloc_contiguous_pages(1); }
 
 void *pmm_alloc_contiguous_pages(size_t num_pages) {
+    // TODO: Add locking for SMP safety
+
     if (page_bitmap == NULL || num_pages == 0) {
-        pr_warn("PMM: Alloc failed - PMM not initialized or zero "
-                "pages requested.\n");
+        pmm_warn(
+            "alloc failed: PMM not initialized or zero pages requested.\n");
         return NULL;
     }
 
-    // TODO: Add locking for SMP safety
-
     if (free_pages_count < num_pages) {
+        pmm_warn("alloc failed: not enough free memory (requested %lu pages, "
+                 "%lu available).\n",
+                 num_pages, free_pages_count);
         return NULL;
     }
 
     int64_t start_page_index = bitmap_find_first_free_block(num_pages);
 
     if (start_page_index == -1) {
+        pmm_warn(
+            "alloc failed: could not find a contiguous block of %lu pages.\n",
+            num_pages);
         return NULL;
     }
 
@@ -288,9 +284,9 @@ void *pmm_alloc_contiguous_pages(size_t num_pages) {
     used_pages_count += num_pages;
 
     void *allocated_address = (void *)((uint64_t)start_page_index * PAGE_SIZE);
+    pmm_dbg("allocated %lu pages at physical address %p\n", num_pages,
+            allocated_address);
 
-    // PMM returns physical addresses. Caller (VMM) maps them to virtual if
-    // needed.
     return allocated_address;
 }
 
@@ -303,8 +299,7 @@ void pmm_free_contiguous_pages(void *p_addr, size_t num_pages) {
 
     uint64_t physical_address = (uint64_t)p_addr;
     if (physical_address % PAGE_SIZE != 0) {
-        pr_warn("PMM: Attempted to free unaligned physical address %p\n",
-                p_addr);
+        pmm_warn("attempted to free unaligned physical address %p\n", p_addr);
         return;
     }
 
@@ -315,12 +310,15 @@ void pmm_free_contiguous_pages(void *p_addr, size_t num_pages) {
     for (size_t i = 0; i < num_pages; i++) {
         uint64_t current_page_index = start_page_index + i;
         if (current_page_index >= total_pages_managed) {
-            pr_warn(
-                "PMM: Attempted to free page index %u out of bounds (%u).\n",
-                current_page_index, total_pages_managed);
+            pmm_warn("attempted to free page index %lu which is out of bounds "
+                     "(%lu).\n",
+                     current_page_index, total_pages_managed);
             break;
         }
         if (!bitmap_is_page_used(current_page_index)) {
+            pmm_warn(
+                "double free detected for page at physical address 0x%lx\n",
+                (uint64_t)current_page_index * PAGE_SIZE);
             return;
         } else {
             bitmap_clear_page(current_page_index);
