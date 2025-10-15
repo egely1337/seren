@@ -38,15 +38,13 @@ void kmain(void) {
     pr_info("Timer driver initialized.\n");
 
     // TODO: Move this behind an arch-independent API
-    pic_unmask_irq(1);
+    irq_unmask(1);
     pr_info("Unmasked Keyboard (IRQ1).\n");
 
-    pic_unmask_irq(0);
+    irq_unmask(0);
     pr_info("Unmasked Timer (IRQ0).\n");
 
-    printk(KERN_INFO
-           "Enabling interrupts (STI).\n"); // This is also arch-specific
-    sti();
+    interrupts_enable();
 
     pr_info("Initialization sequence complete. You can now type. See you <3\n");
 

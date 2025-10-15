@@ -61,4 +61,9 @@ uint64_t interrupt_save_and_disable(void);
  */
 void interrupt_restore(uint64_t flags);
 
+/**
+ * @brief Unmasks a specific IRQ line.
+ */
+void irq_unmask(uint8_t irq_line);
+
 #endif // NUCLEUS_INTERRUPT_H
