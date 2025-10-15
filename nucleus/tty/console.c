@@ -244,3 +244,9 @@ void console_writestring(const char *str) {
         console_putchar(str[i]);
     }
 }
+
+void console_set_fg_color(uint32_t color) { current_fg_color = color; }
+
+void console_reset_fg_color(void) {
+    current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
+}

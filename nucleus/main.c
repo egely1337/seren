@@ -32,23 +32,6 @@ void kmain(void) {
 
     pmm_init(&memmap_request);
 
-#define KHEAP_INITIAL_PAGES 4
-    void *heap_start_phys = pmm_alloc_contiguous_pages(KHEAP_INITIAL_PAGES);
-    if (heap_start_phys) {
-        void *heap_start_virt = (void *)(hhdm_request.response->offset +
-                                         (uintptr_t)heap_start_phys);
-
-        if (kheap_init(heap_start_virt, KHEAP_INITIAL_PAGES * PAGE_SIZE) == 0) {
-            pr_info("Kernel heap initialized successfully.\n");
-        } else {
-            printk(KERN_EMERG "Failed to initialize kernel heap!\n");
-        }
-    } else {
-        printk(KERN_EMERG "Failed to allocate pages for kernel heap!\n");
-    }
-
-    pr_info("Registered example Timer and Keyboard IRQ handlers.\n");
-
     keyboard_init();
     pr_info("Keyboard driver initialized.\n");
 
