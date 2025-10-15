@@ -2,7 +2,7 @@
 #define NUCLEUS_MEM_PMM_H
 
 #include <limine.h>
-#include <stddef.h>
+#include <lib/stddef.h>
 
 #define PAGE_SIZE 0x1000
 #define PAGE_SHIFT 12

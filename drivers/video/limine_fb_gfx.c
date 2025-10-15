@@ -1,6 +1,6 @@
 #include <drivers/video/gfx.h>
 #include <limine.h>
-#include <stddef.h>
+#include <lib/stddef.h>
 
 static void limine_fb_put_pixel(gfx_device_t *dev, uint64_t x, uint64_t y,
                                 uint32_t color) {

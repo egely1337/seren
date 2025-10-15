@@ -81,7 +81,8 @@ INCLUDES_BASE = -I$(INCLUDE_MAIN_DIR)
 CFLAGS_COMMON = -std=c11 -Wall -Wextra -Werror -O2 -g \
 		 -ffreestanding -fno-stack-protector -fno-pie \
 		 -mno-red-zone -mcmodel=kernel -mgeneral-regs-only \
-		 -MMD -MP
+		 -MMD -MP \
+		 -nostdinc
 
 ASFLAGS_COMMON = -g
 LDFLAGS_COMMON = -T $(ROOT_DIR)/linker-$(ARCH).ld -nostdlib -static -no-pie \

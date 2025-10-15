@@ -1,7 +1,7 @@
 #ifndef IDT_H
 #define IDT_H
 
-#include <stdint.h>
+#include <lib/stdint.h>
 
 typedef struct idt_entry {
     uint16_t isr_low;

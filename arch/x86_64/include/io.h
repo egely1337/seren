@@ -1,7 +1,7 @@
 #ifndef KERNEL_IO_H
 #define KERNEL_IO_H
 
-#include <stdint.h>
+#include <lib/stdint.h>
 
 /**
  * @brief Writes a byte to the specified I/O port.

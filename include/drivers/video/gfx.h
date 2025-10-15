@@ -2,7 +2,7 @@
 #define GFX_H
 
 #include <limine.h>
-#include <stdint.h>
+#include <lib/stdint.h>
 
 typedef struct gfx_device {
     void *address;

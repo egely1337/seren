@@ -1,7 +1,7 @@
 #ifndef KERNEL_MEMORY_KHEAP_H
 #define KERNEL_MEMORY_KHEAP_H
 
-#include <stddef.h>
+#include <lib/stddef.h>
 
 /**
  * @brief Initializes the kernel heap.

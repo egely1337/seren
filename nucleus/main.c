@@ -46,7 +46,7 @@ void kmain(void) {
 
     printk(KERN_INFO
            "Enabling interrupts (STI).\n"); // This is also arch-specific
-    __asm__ volatile("sti");
+    sti();
 
     pr_info("Initialization sequence complete. You can now type. See you <3\n");
 
