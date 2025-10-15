@@ -41,4 +41,24 @@ void interrupt_unregister_irq_handler(uint8_t irq_line);
  */
 void irq_c_dispatcher(irq_context_t *frame);
 
+/**
+ * @brief Enables interrupts.
+ */
+void interrupts_enable(void);
+
+/**
+ * @brief Disables interrupts.
+ */
+void interrupts_disable(void);
+
+/**
+ * @brief Disables interrupts and returns previous interrupt state.
+ */
+uint64_t interrupt_save_and_disable(void);
+
+/**
+ * @brief Restores a previously saved interrupts state.
+ */
+void interrupt_restore(uint64_t flags);
+
 #endif // NUCLEUS_INTERRUPT_H

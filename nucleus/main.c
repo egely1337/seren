@@ -1,9 +1,7 @@
 #include <arch.h>
 #include <drivers/input/keyboard.h>
-#include <lib/string.h>
 #include <limine.h>
 #include <nucleus/interrupt.h>
-#include <nucleus/mm/kheap.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/printk.h>
 #include <nucleus/tty/console.h>
@@ -25,8 +23,8 @@ __attribute__((
 
 void kmain(void) {
     console_init();
-    pr_info("Seren OS - Nucleus Kernel Booting...\n");
-    pr_info("LFB GFX, PSF Font, Console Initialized.\n");
+    pr_info("Seren OS booting...\n");
+    pr_info("LFB GFX, PSF Font, console initialized.\n");
 
     arch_init();
 
@@ -39,12 +37,10 @@ void kmain(void) {
     pic_unmask_irq(1);
     pr_info("Unmasked Keyboard (IRQ1).\n");
 
-    printk(KERN_INFO
-           "Enabling interrupts (STI).\n"); // This is also arch-specific
-    __asm__ volatile("sti");
+    pr_info("Enabling interrupts\n");
+    interrupts_enable();
 
-    printk(KERN_INFO
-           "Initialization sequence complete. You can now type. See you <3\n");
+    pr_info("Initialization sequence complete. You can now type. See you <3\n");
 
     while (1) {
         char c = keyboard_getchar();
