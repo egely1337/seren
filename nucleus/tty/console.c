@@ -250,3 +250,56 @@ void console_set_fg_color(uint32_t color) { current_fg_color = color; }
 void console_reset_fg_color(void) {
     current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
 }
+
+void console_log(int level, const char *message) {
+    if (!console_initialized_flag)
+        return;
+
+    const char *prefix_text = NULL;
+    uint32_t prefix_color = CONSOLE_DEFAULT_FG_COLOR;
+
+    switch (level) {
+    case 0:
+        prefix_text = "EMRG";
+        prefix_color = COLOR_BRIGHT_RED;
+        break;
+    case 1:
+        prefix_text = "ALRT";
+        prefix_color = COLOR_BRIGHT_RED;
+        break;
+    case 2:
+        prefix_text = "CRIT";
+        prefix_color = COLOR_BRIGHT_RED;
+        break;
+    case 3:
+        prefix_text = "ERR ";
+        prefix_color = COLOR_RED;
+        break;
+    case 4:
+        prefix_text = "WARN";
+        prefix_color = COLOR_BRIGHT_YELLOW;
+        break;
+    case 5:
+        prefix_text = "NOTE";
+        prefix_color = COLOR_BRIGHT_GREEN;
+        break;
+    case 7:
+        prefix_text = "DBG ";
+        prefix_color = COLOR_BRIGHT_BLUE;
+        break;
+    }
+
+    if (prefix_text) {
+        console_reset_fg_color();
+        console_putchar('[');
+        console_set_fg_color(prefix_color);
+        console_writestring(prefix_text);
+        console_reset_fg_color();
+        console_writestring("] ");
+    } else {
+        console_writestring("       ");
+    }
+
+    console_reset_fg_color();
+    console_writestring(message);
+}

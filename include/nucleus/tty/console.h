@@ -14,6 +14,8 @@
 #define COLOR_YELLOW        0x00FFFF00
 #define COLOR_BRIGHT_RED    0x00FF5555
 #define COLOR_BRIGHT_YELLOW 0x00FFFF55
+#define COLOR_BRIGHT_GREEN  0x0055FF55
+#define COLOR_BRIGHT_BLUE   0x005555FF
 #define COLOR_LIGHT_GREY    0x00D0D0D0
 #define COLOR_DARK_GREY     0x00808080
 
@@ -72,5 +74,10 @@ void console_set_fg_color(uint32_t color);
  * @brief Resets the foreground color to the default.
  */
 void console_reset_fg_color(void);
+
+/**
+ * @brief Kernel's high-level logging entry point.
+ */
+void console_log(int level, const char *message);
 
 #endif // NUCLEUS_CONSOLE_H
