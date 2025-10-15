@@ -27,7 +27,7 @@ static uintptr_t g_heap_end_addr = 0;
 static size_t g_heap_total_size = 0;
 
 int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
-    printk(KERN_INFO "KHEAP: Initializing kernel heap...\n");
+    pr_info("KHEAP: Initializing kernel heap...\n");
 
     if (!initial_pool_start ||
         initial_pool_size < (HEADER_SIZE + HEAP_ALIGNMENT)) {

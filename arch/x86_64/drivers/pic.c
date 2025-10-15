@@ -42,9 +42,9 @@ void pic_remap_and_init(void) {
     outb(PIC1_DATA_PORT, 0xFF);
     outb(PIC2_DATA_PORT, 0xFF);
 
-    printk(KERN_INFO "PICs remapped: Master (0x%x-0x%x), Slave (0x%x-0x%x)\n",
-           PIC_IRQ_OFFSET_MASTER, PIC_IRQ_OFFSET_MASTER + 7,
-           PIC_IRQ_OFFSET_SLAVE, PIC_IRQ_OFFSET_SLAVE + 7);
+    pr_info("PICs remapped: Master (0x%x-0x%x), Slave (0x%x-0x%x)\n",
+            PIC_IRQ_OFFSET_MASTER, PIC_IRQ_OFFSET_MASTER + 7,
+            PIC_IRQ_OFFSET_SLAVE, PIC_IRQ_OFFSET_SLAVE + 7);
 }
 
 void pic_send_eoi(uint8_t irq_number) {

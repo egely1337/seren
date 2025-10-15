@@ -110,7 +110,7 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
     struct limine_memmap_response *memmap = memmap_request->response;
     uint64_t hhdm_offset = hhdm_request.response->offset;
 
-    printk(KERN_INFO "PMM: Initializing Physical Memory Manager...\n");
+    pr_info("PMM: Initializing Physical Memory Manager...\n");
     printk(KERN_DEBUG "PMM: HHDM virtual offset: 0x%p\n", (void *)hhdm_offset);
     printk(KERN_DEBUG "PMM: Limine reported %u memory map entries.\n",
            memmap->entry_count);
@@ -263,14 +263,14 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request) {
         }
     }
 
-    printk(KERN_INFO "PMM: Initialization complete.\n");
-    printk(KERN_INFO "PMM: Total managed: %lu MiB (%lu pages)\n",
-           (total_pages_managed * PAGE_SIZE) / (1024 * 1024),
-           total_pages_managed);
-    printk(KERN_INFO "PMM: Usable free: %lu MiB (%lu pages)\n",
-           (free_pages_count * PAGE_SIZE) / (1024 * 1024), free_pages_count);
-    printk(KERN_INFO "PMM: Used: %lu KiB (%lu pages)\n",
-           (used_pages_count * PAGE_SIZE) / 1024, used_pages_count);
+    pr_info("PMM: Initialization complete.\n");
+    pr_info("PMM: Total managed: %lu MiB (%lu pages)\n",
+            (total_pages_managed * PAGE_SIZE) / (1024 * 1024),
+            total_pages_managed);
+    pr_info("PMM: Usable free: %lu MiB (%lu pages)\n",
+            (free_pages_count * PAGE_SIZE) / (1024 * 1024), free_pages_count);
+    pr_info("PMM: Used: %lu KiB (%lu pages)\n",
+            (used_pages_count * PAGE_SIZE) / 1024, used_pages_count);
 }
 
 // --- Allocation and Deallocation Functions ---

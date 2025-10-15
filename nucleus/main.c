@@ -25,8 +25,8 @@ __attribute__((
 
 void kmain(void) {
     console_init();
-    printk(KERN_INFO "Seren OS - Nucleus Kernel Booting...\n");
-    printk(KERN_INFO "LFB GFX, PSF Font, Console Initialized.\n");
+    pr_info("Seren OS - Nucleus Kernel Booting...\n");
+    pr_info("LFB GFX, PSF Font, Console Initialized.\n");
 
     arch_init();
 
@@ -39,7 +39,7 @@ void kmain(void) {
                                          (uintptr_t)heap_start_phys);
 
         if (kheap_init(heap_start_virt, KHEAP_INITIAL_PAGES * PAGE_SIZE) == 0) {
-            printk(KERN_INFO "Kernel heap initialized successfully.\n");
+            pr_info("Kernel heap initialized successfully.\n");
         } else {
             printk(KERN_EMERG "Failed to initialize kernel heap!\n");
         }
@@ -47,14 +47,14 @@ void kmain(void) {
         printk(KERN_EMERG "Failed to allocate pages for kernel heap!\n");
     }
 
-    printk(KERN_INFO "Registered example Timer and Keyboard IRQ handlers.\n");
+    pr_info("Registered example Timer and Keyboard IRQ handlers.\n");
 
     keyboard_init();
-    printk(KERN_INFO "Keyboard driver initialized.\n");
+    pr_info("Keyboard driver initialized.\n");
 
     // TODO: Move this behind an arch-independent API
     pic_unmask_irq(1);
-    printk(KERN_INFO "Unmasked Keyboard (IRQ1).\n");
+    pr_info("Unmasked Keyboard (IRQ1).\n");
 
     printk(KERN_INFO
            "Enabling interrupts (STI).\n"); // This is also arch-specific
