@@ -46,5 +46,5 @@ void exception_handler(struct pt_regs *frame) {
         message = exception_messages[frame->vector];
     }
 
-    panic(message, frame);
+    die(message, frame);
 }

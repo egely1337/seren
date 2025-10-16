@@ -1,10 +1,12 @@
 #define pr_fmt(fmt) "slab: " fmt
 
 #include <lib/string.h>
+#include <nucleus/list.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/mm/slab.h>
 #include <nucleus/panic.h>
 #include <nucleus/printk.h>
+#include <nucleus/stddef.h>
 #include <nucleus/types.h>
 
 #define KMALLOC_MIN_SHIFT  3
@@ -23,14 +25,14 @@ struct kmem_cache {
     size_t align;
     void (*ctor)(void *);
     void (*dtor)(void *);
-    struct slab *partial;
-    struct slab *full;
-    struct slab *free;
+    struct list_head partial;
+    struct list_head full;
+    struct list_head free;
     unsigned int nr_free_slabs;
 };
 
 struct slab {
-    struct slab *next;
+    struct list_head list;
     struct kmem_cache *cache;
     u16 inuse;
     u16 total;
@@ -59,24 +61,20 @@ static inline void *__obj_get_next(void *obj) { return *(void **)obj; }
 static struct kmem_cache kmalloc_caches[KMALLOC_NUM_CACHES];
 static int kmalloc_caches_inited;
 
-static void __slab_list_push(struct slab **head, struct slab *sl) {
-    sl->next = *head;
-    *head = sl;
+static inline struct slab *__list_to_slab(struct list_head *head) {
+    return (struct slab *)((char *)head - offsetof(struct slab, list));
 }
 
-static void __slab_list_remove(struct slab **head, struct slab *sl) {
-    struct slab *prev = NULL, *cur = *head;
-    while (cur) {
-        if (cur == sl) {
-            if (prev)
-                prev->next = cur->next;
-            else
-                *head = cur->next;
-            return;
-        }
-        prev = cur;
-        cur = cur->next;
-    }
+static inline void __slab_list_add(struct slab *sl, struct list_head *head) {
+    list_add(&sl->list, head);
+}
+
+static inline void __slab_list_del(struct slab *sl) { list_del(&sl->list); }
+
+static inline struct slab *__slab_list_first(struct list_head *head) {
+    if (list_empty(head))
+        return NULL;
+    return __list_to_slab(head->next);
 }
 
 static struct slab *__slab_create(struct kmem_cache *cache) {
@@ -97,7 +95,7 @@ static struct slab *__slab_create(struct kmem_cache *cache) {
     sl->page = page;
     sl->inuse = 0;
     sl->free_list = NULL;
-    sl->next = NULL;
+    INIT_LIST_HEAD(&sl->list);
 
     /* place objects after slab header */
     cursor =
@@ -134,12 +132,19 @@ static void *__slab_alloc(struct kmem_cache *cache) {
     struct slab *sl;
     void *obj;
 
-    sl = cache->partial ? cache->partial : cache->free;
+    if (!list_empty(&cache->partial)) {
+        sl = __slab_list_first(&cache->partial);
+    } else if (!list_empty(&cache->free)) {
+        sl = __slab_list_first(&cache->free);
+    } else {
+        sl = NULL;
+    }
+
     if (!sl) {
         sl = __slab_create(cache);
         if (!sl)
             return NULL;
-        __slab_list_push(&cache->free, sl);
+        __slab_list_add(sl, &cache->free);
         cache->nr_free_slabs++;
     }
 
@@ -151,15 +156,15 @@ static void *__slab_alloc(struct kmem_cache *cache) {
              cache->name, obj, sl, sl->inuse, sl->total);
 
     if (sl->inuse == sl->total) {
-        __slab_list_remove(&cache->free, sl);
-        __slab_list_remove(&cache->partial, sl);
-        __slab_list_push(&cache->full, sl);
+        __slab_list_del(sl);
+        __slab_list_add(sl, &cache->full);
         if (cache->nr_free_slabs)
             cache->nr_free_slabs--;
     } else {
-        if (sl == cache->free) {
-            __slab_list_remove(&cache->free, sl);
-            __slab_list_push(&cache->partial, sl);
+        if (!list_empty(&cache->free) &&
+            sl == __slab_list_first(&cache->free)) {
+            __slab_list_del(sl);
+            __slab_list_add(sl, &cache->partial);
             if (cache->nr_free_slabs)
                 cache->nr_free_slabs--;
         }
@@ -172,11 +177,11 @@ static void *__slab_alloc(struct kmem_cache *cache) {
 }
 
 static void __slab_try_reclaim(struct kmem_cache *cache) {
-    while (cache->nr_free_slabs > 1 && cache->free) {
-        struct slab *victim = cache->free;
+    while (cache->nr_free_slabs > 1 && !list_empty(&cache->free)) {
+        struct slab *victim = __slab_list_first(&cache->free);
         pr_debug("kmem_cache '%s': reclaim slab %p (free_slabs=%u)\n",
                  cache->name, victim, cache->nr_free_slabs);
-        __slab_list_remove(&cache->free, victim);
+        __slab_list_del(victim);
         __slab_release(victim);
         cache->nr_free_slabs--;
     }
@@ -197,8 +202,8 @@ static void __slab_free(struct kmem_cache *cache, void *obj) {
     sl->free_list = obj;
 
     if (sl->inuse == sl->total) {
-        __slab_list_remove(&cache->full, sl);
-        __slab_list_push(&cache->partial, sl);
+        __slab_list_del(sl);
+        __slab_list_add(sl, &cache->partial);
     }
 
     sl->inuse--;
@@ -208,8 +213,8 @@ static void __slab_free(struct kmem_cache *cache, void *obj) {
 
     if (sl->inuse == 0) {
         // move to free
-        __slab_list_remove(&cache->partial, sl);
-        __slab_list_push(&cache->free, sl);
+        __slab_list_del(sl);
+        __slab_list_add(sl, &cache->free);
         cache->nr_free_slabs++;
         __slab_try_reclaim(cache);
     }
@@ -231,9 +236,9 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size,
     c->align = align;
     c->ctor = ctor;
     c->dtor = dtor;
-    c->partial = NULL;
-    c->full = NULL;
-    c->free = NULL;
+    INIT_LIST_HEAD(&c->partial);
+    INIT_LIST_HEAD(&c->full);
+    INIT_LIST_HEAD(&c->free);
     c->nr_free_slabs = 0;
 
     return c;
@@ -241,14 +246,19 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size,
 
 void kmem_cache_destroy(struct kmem_cache *cache) {
     struct slab *sl;
-    for (sl = cache->partial; sl; sl = sl->next)
+
+    if (!list_empty(&cache->partial)) {
         panic("kmem_cache_destroy: partial slabs remain", NULL);
-    for (sl = cache->full; sl; sl = sl->next)
+    }
+
+    if (!list_empty(&cache->full)) {
         panic("kmem_cache_destroy: full slabs remain", NULL);
-    while (cache->free) {
-        struct slab *victim = cache->free;
-        __slab_list_remove(&cache->free, victim);
-        __slab_release(victim);
+    }
+
+    while (!list_empty(&cache->free)) {
+        sl = __slab_list_first(&cache->free);
+        __slab_list_del(sl);
+        __slab_release(sl);
     }
 }
 
@@ -272,9 +282,9 @@ static void __kmalloc_caches_init(void) {
         c->align = sizeof(void *);
         c->ctor = NULL;
         c->dtor = NULL;
-        c->partial = NULL;
-        c->full = NULL;
-        c->free = NULL;
+        INIT_LIST_HEAD(&c->partial);
+        INIT_LIST_HEAD(&c->full);
+        INIT_LIST_HEAD(&c->free);
         c->nr_free_slabs = 0;
     }
 

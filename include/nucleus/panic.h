@@ -1,12 +1,22 @@
-#ifndef NUCLEUS_PANIC_H
-#define NUCLEUS_PANIC_H
+#ifndef _NUCLEUS_PANIC_H
+#define _NUCLEUS_PANIC_H
 
 #include <nucleus/interrupt.h>
 
 /**
- * @brief Halts the kernel.
+ * panic - Halts the kernel.
+ * @fmt: A printf-style format string.
+ * @...: Arguments for the format string.
  */
-void panic(const char *message, struct pt_regs *context)
-    __attribute__((noreturn));
+void panic(const char *fmt, ...) __attribute__((noreturn));
 
-#endif // NUCLEUS_PANIC_H
+/**
+ * die - Halts the kernel due to a fatal exception.
+ * @msg:    A string describing the trap/exception.
+ * @regs:   The register context at the time of the fault.
+ *
+ * This function is called by trap handlers for unrecoverable faults.
+ */
+void die(const char *msg, struct pt_regs *regs);
+
+#endif // _NUCLEUS_PANIC_H

@@ -1,4 +1,6 @@
 #include <asm/irqflags.h>
+#include <lib/format.h>
+#include <lib/stdarg.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/panic.h>
 #include <nucleus/printk.h>
@@ -29,27 +31,33 @@ static void __print_registers(struct pt_regs *context) {
     }
 }
 
-void panic(const char *message, struct pt_regs *context) {
+void panic(const char *fmt, ...) {
+    static char buf[1024];
+    va_list args;
+
     local_irq_disable();
 
-    pr_emerg("==============================================================="
-             "=======\n");
-    pr_emerg("!!                        KERNEL PANIC                           "
-             "   !!\n");
-    pr_emerg("================================================================="
-             "=====\n");
+    va_start(args, fmt);
+    kvsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
 
-    if (message) {
-        pr_emerg("Reason: %s\n\n", message);
-    } else {
-        pr_emerg("Reason: Unknown");
-    }
+    pr_emerg("---[ KERNEL PANIC ]---\n");
+    pr_emerg("Reason: %s", buf);
+    pr_emerg("System halted.");
 
-    pr_crit("Register Dump:\n");
-    __print_registers(context);
-
-    pr_emerg("\nSystem halted. Please reboot.\n");
     while (1) {
         __asm__ volatile("hlt");
     }
+}
+
+void die(const char *msg, struct pt_regs *regs) {
+    local_irq_disable();
+
+    pr_alert("Oops: %s\n", msg);
+    pr_alert("Vector: %llu, Error Code: %llx\n", regs->vector,
+             regs->error_code);
+
+    __print_registers(regs);
+
+    panic("Fatal exception");
 }
