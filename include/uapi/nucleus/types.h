@@ -3,7 +3,7 @@
 
 #include <asm/types.h>
 
-#ifdef __KERNEL__
+#ifndef __KERNEL__
 #warning "You are trying to use kernel headers from user space."
 #endif
 

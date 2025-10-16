@@ -82,7 +82,7 @@ CFLAGS_COMMON = -std=c11 -Wall -Wextra -Werror -O2 -g \
 		 -ffreestanding -fno-stack-protector -fno-pie \
 		 -mno-red-zone -mcmodel=kernel -mgeneral-regs-only \
 		 -MMD -MP \
-		 -nostdinc
+		 -nostdinc -D__KERNEL__
 
 ASFLAGS_COMMON = -g
 LDFLAGS_COMMON = -T $(ROOT_DIR)/linker-$(ARCH).ld -nostdlib -static -no-pie \

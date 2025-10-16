@@ -61,10 +61,6 @@ static inline void list_add_tail(struct list_head *new,
     __list_add(new, head->prev, head);
 }
 
-/*
- * Internal helper - delete entry by making the prev/next entries point to each
- * other.
- */
 static inline void __list_del(struct list_head *prev, struct list_head *next) {
     next->prev = prev;
     prev->next = next;
