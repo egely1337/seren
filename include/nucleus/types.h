@@ -37,4 +37,6 @@ typedef __s_size_t size_t;
 typedef __s_pid_t pid_t;
 #endif
 
+typedef u64 phys_addr_t;
+
 #endif // _NUCLEUS_TYPES_H

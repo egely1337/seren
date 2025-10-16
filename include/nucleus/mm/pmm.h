@@ -1,77 +1,104 @@
-#ifndef NUCLEUS_MEM_PMM_H
-#define NUCLEUS_MEM_PMM_H
+#ifndef _NUCLEUS_MM_PMM_H
+#define _NUCLEUS_MM_PMM_H
 
 #include <limine.h>
 #include <nucleus/stddef.h>
 
-#define PAGE_SIZE  0x1000
 #define PAGE_SHIFT 12
+#define PAGE_SIZE  (1UL << PAGE_SHIFT)
+#define PAGE_MASK  (~(PAGE_SIZE - 1))
+
+#define PFN_ALIGN(x) (((unsigned long)(x) + PAGE_SIZE - 1) & PAGE_MASK)
+#define PFN_UP(x)    (((unsigned_long)(x) + PAGE_SIZE - 1) >> PAGE_SHIFT)
+#define PFN_DOWN(x)  ((unsigned long)(x) >> PAGE_SHIFT)
+#define PFN_PHYS(x)  ((phys_addr_t)(x) << PAGE_SHIFT)
 
 /**
- * @brief Initializes the Physical Memory Manager.
- *
- * This function should be called once during kernel initialization,
- * after the Limine memory map is available. It will parse the memory map,
- * identify usable physical memory regions, and set up the page frame allocator.
- *
- * @param memmap_request Pointer to the Limine memmap request structure,
- * whose response contains the memory map.
+ * struct page - Abstract handle for a physical page frame
+ * @pfn:    Page frame number
  */
-void pmm_init(volatile struct limine_memmap_request *memmap_request);
+struct page {
+    u64 pfn;
+};
 
 /**
- * @brief Allocates a single physical page frame.
- *
- * Finds a free page frame, marks it as used, and returns its physical address.
- *
- * @return Physical address of the allocated page frame, or 0 (NULL equivalent
- * for physical addresses) if no free page frame is available.
+ * mem_init - Initialize the physical memory manager
+ * @memmap_request: Pointer to the Limine memmap request
  */
-void *pmm_alloc_page(void);
+void mem_init(volatile struct limine_memmap_request *memmap_request);
 
 /**
- * @brief Allocates multiple contiguous physical page frames.
+ * alloc_pages - Allocate a contiguous block of physical pages
+ * @order:  The order of the allocation (2^order pages)
+ */
+struct page *alloc_pages(u32 order);
+
+/**
+ * free_pages - Free a contiguous block of physical pages
+ * @page:   Pointer to the first `struct page` in the block to be freed.
+ * @order:  The order of the block that was allocated.
+ */
+void free_pages(struct page *page, u32 order);
+
+/**
+ * alloc_page - Allocate a single physical page
  *
- * @param num_pages The number of contiguous pages to allocate.
- * @return Physical address of the first allocated page frame, or 0 if
- * not enough contiguous pages are available.
+ * Inline wrapper around alloc_pages(0);
  */
-void *pmm_alloc_contiguous_pages(size_t num_pages);
+static inline struct page *alloc_page(void) { return alloc_pages(0); }
 
 /**
- * @brief Frees a previously allocated physical page frame.
- *
- * Marks the page frame at the given physical address as free.
- *
- * @param p_addr Physical address of the page frame to free.
+ * free_page - Free a single physical page
+ * @page:   Pointer to the `struct page` to be freed
  */
-void pmm_free_page(void *p_addr);
+static inline void free_page(struct page *page) { free_pages(page, 0); }
 
 /**
- * @brief Frees multiple contiguous physical page frames.
- *
- * @param p_addr Physical address of the first page frame in the contiguous
- * block.
- * @param num_pages The number of contiguous pages to free.
+ * page_to_phys - Convert a `struct page` to its physical address
+ * @page:   The page structure to convert.
  */
-void pmm_free_contiguous_pages(void *p_addr, size_t num_pages);
+phys_addr_t page_to_phys(struct page *page);
 
 /**
- * @brief Gets the total amount of usable physical memory.
- * @return Total usable memory in bytes.
+ * phys_to_page - Convert a physical address to its `struct page`
+ * @phys:   The physical memory address.
  */
-u64 pmm_get_total_memory(void);
+struct page *phys_to_page(phys_addr_t phys);
 
 /**
- * @brief Gets the amount of free physical memory.
- * @return Free memory in bytes.
+ * virt_to_page - Convert a kernel virtual address to its `struct page`
+ * @addr:   The kernel virtual address (from the HHDM)
  */
-u64 pmm_get_free_memory(void);
+static inline struct page *virt_to_page(void *addr) {
+    extern volatile struct limine_hhdm_request hhdm_request;
+    u64 hhdm_offset = hhdm_request.response->offset;
+    phys_addr_t phys = (phys_addr_t)addr - hhdm_offset;
+    return phys_to_page(phys);
+}
 
 /**
- * @brief Gets the amount of used physical memory.
- * @return Used memory in bytes.
+ * page_to_virt - Convert a `struct page` to its kernel virtual address
+ * @addr:   The page structure to convert
  */
-u64 pmm_get_used_memory(void);
+static inline void *page_to_virt(struct page *page) {
+    extern volatile struct limine_hhdm_request hhdm_request;
+    u64 hhdm_offset = hhdm_request.response->offset;
+    return (void *)(hhdm_offset + page_to_phys(page));
+}
 
-#endif // NUCLEUS_MEM_PMM_H
+/**
+ * totalram_pages - Returns the total amount of physical memory managed
+ */
+u64 totalram_pages(void);
+
+/**
+ * freeram_bytes - Returns the current amount of free physical memory
+ */
+u64 freeram_pages(void);
+
+/**
+ * usedram_bytes - Returns the current amount of used physical memory
+ */
+u64 usedram_pages(void);
+
+#endif // __NUCLEUS_MM_PMM_H

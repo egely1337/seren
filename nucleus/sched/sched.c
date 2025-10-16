@@ -56,7 +56,7 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
     new_task->id = new_pid;
     new_task->name = name;
 
-    void *stack = pmm_alloc_page();
+    void *stack = alloc_page();
     if (!stack) {
         pr_err("failed to create task '%s': out of physical memory\n", name);
         g_highest_pid--;

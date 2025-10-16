@@ -31,7 +31,7 @@ void kmain(void) {
 
     arch_init();
 
-    pmm_init(&memmap_request);
+    mem_init(&memmap_request);
 
     keyboard_init();
     pr_info("Keyboard driver initialized.\n");

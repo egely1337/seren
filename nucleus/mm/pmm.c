@@ -7,323 +7,374 @@
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
 
-// --- PMM Internal State ---
-static u8 *page_bitmap = NULL;
-static u64 total_pages_managed = 0;
-static u64 highest_phys_addr_managed = 0;
-static u64 free_pages_count = 0;
-static u64 used_pages_count = 0;
+static unsigned long *bitmap;
+static struct page *mem_map;
+
+static unsigned long max_pfn;
+static unsigned long nr_free;
 
 extern volatile struct limine_hhdm_request hhdm_request;
-
-// Linker-defined symbol for the end of the kernel image (VMA)
 extern char _kernel_end[];
 
 /**
- * @brief Marks a page as used in the bitmap (sets the bit).
- * @param page_index The index of the page to mark.
+ * __set_bit - Marks a page as used in the bitmap
+ * @pfn:    The index of the page
  */
-static void bitmap_set_page(u64 page_index) {
-    if (!page_bitmap || page_index >= total_pages_managed)
+static inline void __set_bit(u64 pfn) {
+    if (pfn >= max_pfn)
         return;
-    u64 byte_index = page_index / 8;
-    u8 bit_index = page_index % 8;
-    page_bitmap[byte_index] |= (1 << bit_index);
+    bitmap[pfn >> 6] |= (1UL << (pfn & 63));
 }
 
 /**
- * @brief Marks a page as free in the bitmap (clears the bit).
- * @param page_index The index of the page to mark.
+ * __clear_bit - Marks a page as free in the bitmap
+ * @pfn:    The index of the page
  */
-static void bitmap_clear_page(u64 page_index) {
-    if (!page_bitmap || page_index >= total_pages_managed)
+static inline void __clear_bit(u64 pfn) {
+    if (pfn >= max_pfn)
         return;
-    u64 byte_index = page_index / 8;
-    u8 bit_index = page_index % 8;
-    page_bitmap[byte_index] &= ~(1 << bit_index);
+    bitmap[pfn >> 6] &= ~(1UL << (pfn & 63));
 }
 
 /**
- * @brief Checks if a page is marked as used in the bitmap.
- * @param page_index The index of the page to test.
- * @return 1 if the page is used (bit is set), 0 if free (bit is clear).
- * Returns 1 (used) if page_index is out of bounds, as safety measure.
+ * __test_bit - Checks if a page is marked as used in the bitmap
+ * @pfn:    The index of the page
+ *
+ * Returns 1 if the page is used, 0 if free.
+ * Returns 1 if pfn is out of bounds.
  */
-static int bitmap_is_page_used(u64 page_index) {
-    if (page_index >= total_pages_managed)
+static inline int __test_bit(u64 pfn) {
+    if (pfn >= max_pfn)
         return 1;
-    u64 byte_index = page_index / 8;
-    u8 bit_index = page_index % 8;
-    return (page_bitmap[byte_index] & (1 << bit_index)) != 0;
+    return (bitmap[pfn >> 6] & (1UL << (pfn & 63))) != 0;
 }
 
 /**
- * @brief Finds the first block of `num_pages` consecutive free pages.
- * @param num_pages The number of contiguous free pages to find.
- * @return The starting page index of the free block, or -1 if no such block is
- * found.
+ * __find_free_pages - Find a contiguous block of free pages
+ * @count:  The number of free pages to find
  */
-static s64 bitmap_find_first_free_block(size_t num_pages) {
-    if (num_pages == 0 || !page_bitmap)
+static s64 __find_free_pages(size_t count) {
+    u64 consecutive = 0;
+    u64 start_pfn = 0;
+
+    if (!count || !bitmap)
         return -1;
-    u64 consecutive_free_count = 0;
-    for (u64 i = 0; i < total_pages_managed; i++) {
-        if (!bitmap_is_page_used(i)) {
-            consecutive_free_count++;
-            if (consecutive_free_count == num_pages) {
-                return i - num_pages + 1;
-            }
+
+    for (u64 pfn = 0; pfn < max_pfn; pfn++) {
+        if (!__test_bit(pfn)) {
+            if (consecutive == 0)
+                start_pfn = pfn;
+            consecutive++;
+            if (consecutive == count)
+                return start_pfn;
         } else {
-            consecutive_free_count = 0;
+            consecutive = 0;
         }
     }
+
     return -1;
 }
 
-// --- PMM Public API---
+/**
+ * __mark_pages_inuse - Mark a range of pages as allocated
+ * @count:  The number of pages to mark
+ */
+static void __mark_pages_inuse(u64 start_pfn, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        __set_bit(start_pfn + i);
+        nr_free--;
+    }
+}
 
 /**
- * @brief Initializes the Physical Memory Manager.
- * This is the big one. It figures out available memory, sets up our tracking
- * bitmap, and reserves space for the kernel and the bitmap itself.
+ * __mark_pages_free - Mark a range of pages as free
  */
-void pmm_init(volatile struct limine_memmap_request *memmap_request) {
-    if (!memmap_request || !memmap_request->response) {
-        panic("Limine memmap request or response is NULL!", NULL);
+static void __mark_pages_free(u64 start_pfn, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        if (__test_bit(start_pfn + i)) {
+            __clear_bit(start_pfn + i);
+            nr_free++;
+        }
     }
-    if (!hhdm_request.response) {
-        panic("Limine HHDM response is NULL!", NULL);
-    }
+}
 
+static void __init_mem_map(u64 hhdm_offset, phys_addr_t mem_map_phys) {
+    mem_map = (struct page *)(hhdm_offset + mem_map_phys);
+
+    for (u64 pfn = 0; pfn < max_pfn; pfn++) {
+        mem_map[pfn].pfn = pfn;
+    }
+}
+
+/**
+ * Find suitable location for allocator metadata
+ *
+ * We need space for:
+ * 1. The bitmap
+ * 2. The mem_map array
+ */
+static phys_addr_t
+__find_metadata_location(volatile struct limine_memmap_request *memmap_request,
+                         phys_addr_t kernel_end, size_t required_size) {
     struct limine_memmap_response *memmap = memmap_request->response;
-    u64 hhdm_offset = hhdm_request.response->offset;
 
-    pr_debug("HHDM virtual offset: 0x%lx\n", hhdm_offset);
-    pr_debug("Limine reported %lu memory map entries.\n", memmap->entry_count);
-
-    // Step 1: Determine the highest physical address to manage.
-    highest_phys_addr_managed = 0;
     for (u64 i = 0; i < memmap->entry_count; i++) {
         struct limine_memmap_entry *entry = memmap->entries[i];
+
+        if (entry->type != LIMINE_MEMMAP_USABLE)
+            continue;
+
+        u64 region_start = entry->base;
+        u64 region_end = entry->base + entry->length;
+
+        if (region_start < kernel_end)
+            region_start = kernel_end;
+
+        region_start = (region_start + PAGE_SIZE - 1) & PAGE_MASK;
+
+        if (region_start < region_end &&
+            (region_end - region_start) >= required_size)
+            return region_start;
+    }
+
+    return 0;
+}
+
+/**
+ * __get_kernel_end - Calculate the physical end address of the kernel
+ */
+static phys_addr_t
+__get_kernel_end(volatile struct limine_memmap_request *memmap_request) {
+    struct limine_memmap_response *memmap = memmap_request->response;
+    phys_addr_t kernel_start = KERNEL_PHYSICAL_LOAD_ADDR;
+    phys_addr_t kernel_end = 0;
+
+    for (u64 i = 0; i < memmap->entry_count; i++) {
+        struct limine_memmap_entry *entry = memmap->entries[i];
+
+        if (entry->type == LIMINE_MEMMAP_KERNEL_AND_MODULES) {
+            if (entry->base <= kernel_start &&
+                (entry->base + entry->length) > kernel_start) {
+                kernel_end = entry->base + entry->length;
+                break;
+            }
+        }
+    }
+
+    if (!kernel_end) {
+        uintptr_t kernel_virt_end = (uintptr_t)_kernel_end;
+        kernel_end =
+            KERNEL_PHYSICAL_LOAD_ADDR + (kernel_virt_end - KERNEL_VIRTUAL_BASE);
+        pr_warn("using linker symbols for kernel end\n");
+    }
+
+    return (kernel_end + PAGE_SIZE - 1) & PAGE_MASK;
+}
+
+/**
+ * Reserve pages that shouldn't be allocated:
+ * - Non-usable memory regions
+ * - Kernel image
+ * - Allocator metadata (bitmap + mem_map)
+ */
+static void
+__reserve_system_pages(volatile struct limine_memmap_request *memmap_request,
+                       phys_addr_t kernel_end, phys_addr_t metadata_phys,
+                       size_t metadata_size) {
+    struct limine_memmap_response *memmap = memmap_request->response;
+
+    for (u64 pfn = 0; pfn < max_pfn; pfn++)
+        __set_bit(pfn);
+
+    for (u64 i = 0; i < memmap->entry_count; i++) {
+        struct limine_memmap_entry *entry = memmap->entries[i];
+
         if (entry->type == LIMINE_MEMMAP_USABLE ||
             entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
-            if (entry->base + entry->length > highest_phys_addr_managed) {
-                highest_phys_addr_managed = entry->base + entry->length;
-            }
-        }
-    }
-    if (highest_phys_addr_managed == 0) {
-        panic("no usable or bootloader-reclaimable memory found.", NULL);
-    }
-    highest_phys_addr_managed =
-        (highest_phys_addr_managed + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-    total_pages_managed = highest_phys_addr_managed / PAGE_SIZE;
-    if (total_pages_managed == 0 && highest_phys_addr_managed > 0)
-        total_pages_managed = 1;
+            u64 start_pfn = entry->base >> PAGE_SHIFT;
+            u64 end_pfn = (entry->base + entry->length) >> PAGE_SHIFT;
 
-    pr_debug("highest physical address found: 0x%lx\n",
-             highest_phys_addr_managed);
-    pr_debug("total pages to manage: %lu\n", total_pages_managed);
-
-    // Step 2: Determine where our kernel image ends in physical memory.
-    u64 kernel_phys_start = KERNEL_PHYSICAL_LOAD_ADDR;
-    u64 kernel_phys_end = 0;
-    for (u64 i = 0; i < memmap->entry_count; i++) {
-        struct limine_memmap_entry *entry = memmap->entries[i];
-        if (entry->type == LIMINE_MEMMAP_KERNEL_AND_MODULES) {
-            if (entry->base <= kernel_phys_start &&
-                (entry->base + entry->length) > kernel_phys_start) {
-                kernel_phys_end = entry->base + entry->length;
-                pr_debug(
-                    "kernel region from memmap: base=0x%lx, length=0x%lx\n",
-                    entry->base, entry->length);
-                break;
-            }
-        }
-    }
-    if (kernel_phys_end == 0) {
-        uintptr_t kernel_virtual_end_addr = (uintptr_t)_kernel_end;
-        kernel_phys_end = KERNEL_PHYSICAL_LOAD_ADDR +
-                          (kernel_virtual_end_addr - KERNEL_VIRTUAL_BASE);
-        pr_warn("could not find definitive kernel region in memmap, "
-                "calculating from linker symbols.\n");
-    }
-    kernel_phys_end = (kernel_phys_end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-    pr_debug("kernel physical footprint ends at (aligned): 0x%lx\n",
-             kernel_phys_end);
-
-    // Step 3: Calculate bitmap size and find a spot for it.
-    size_t bitmap_size_bytes = (total_pages_managed + 7) / 8;
-    pr_debug("bitmap requires %u bytes (%u KiB)\n", bitmap_size_bytes,
-             bitmap_size_bytes / 1024);
-    u64 bitmap_physical_addr = 0;
-
-    for (u64 i = 0; i < memmap->entry_count; i++) {
-        struct limine_memmap_entry *entry = memmap->entries[i];
-        if (entry->type == LIMINE_MEMMAP_USABLE) {
-            u64 current_region_start = entry->base;
-            u64 current_region_end = entry->base + entry->length;
-            u64 potential_start = (kernel_phys_end > current_region_start)
-                                      ? kernel_phys_end
-                                      : current_region_start;
-            potential_start =
-                (potential_start + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-
-            if (potential_start < current_region_end &&
-                (current_region_end - potential_start) >= bitmap_size_bytes) {
-                bitmap_physical_addr = potential_start;
-                break;
-            }
-        }
-    }
-    if (bitmap_physical_addr == 0) {
-        panic("failed to find a suitable memory region for the bitmap!", NULL);
-    }
-    page_bitmap = (u8 *)(hhdm_offset + bitmap_physical_addr);
-    pr_info("bitmap placed at physical 0x%lx (virtual 0x%p)\n",
-            (void *)bitmap_physical_addr, page_bitmap);
-
-    // Step 4: Initialize bitmap and page counts
-    for (size_t k = 0; k < bitmap_size_bytes; k++) {
-        page_bitmap[k] = 0x00;
-    }
-
-    for (u64 page_idx = 0; page_idx < total_pages_managed; page_idx++) {
-        u64 current_phys_addr = page_idx * PAGE_SIZE;
-        int is_usable_or_reclaimable = 0;
-        for (u64 k = 0; k < memmap->entry_count; k++) {
-            struct limine_memmap_entry *entry = memmap->entries[k];
-            if (current_phys_addr >= entry->base &&
-                current_phys_addr < (entry->base + entry->length)) {
-                if (entry->type == LIMINE_MEMMAP_USABLE ||
-                    entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
-                    is_usable_or_reclaimable = 1;
-                }
-                break; // Found the entry covering this page
-            }
-        }
-        if (!is_usable_or_reclaimable) {
-            bitmap_set_page(page_idx); // Mark as used if not usable/reclaimable
+            for (u64 pfn = start_pfn; pfn < end_pfn && pfn < max_pfn; pfn++)
+                __clear_bit(pfn);
         }
     }
 
-    u64 kernel_start_page_idx = kernel_phys_start / PAGE_SIZE;
-    u64 kernel_num_pages = (kernel_phys_end - kernel_phys_start) / PAGE_SIZE;
-    for (u64 k = 0; k < kernel_num_pages; k++) {
-        bitmap_set_page(kernel_start_page_idx + k);
+    nr_free = 0;
+    for (u64 pfn = 0; pfn < max_pfn; pfn++) {
+        if (!__test_bit(pfn))
+            nr_free++;
     }
-    pr_debug("reserved %lu pages for the kernel.\n", kernel_num_pages);
 
-    u64 bitmap_start_page_idx = bitmap_physical_addr / PAGE_SIZE;
-    u64 bitmap_num_pages_val = (bitmap_size_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
-    for (u64 k = 0; k < bitmap_num_pages_val; k++) {
-        bitmap_set_page(bitmap_start_page_idx + k);
-    }
-    pr_debug("reserved %lu pages for the PMM bitmap itself.\n",
-             bitmap_num_pages_val);
+    u64 kernel_start_pfn = KERNEL_PHYSICAL_LOAD_ADDR >> PAGE_SHIFT;
+    u64 kernel_end_pfn = kernel_end >> PAGE_SHIFT;
 
-    free_pages_count = 0;
-    used_pages_count = 0;
-    for (u64 i = 0; i < total_pages_managed; i++) {
-        if (bitmap_is_page_used(i)) {
-            used_pages_count++;
-        } else {
-            free_pages_count++;
+    for (u64 pfn = kernel_start_pfn; pfn < kernel_end_pfn; pfn++) {
+        if (!__test_bit(pfn)) {
+            __set_bit(pfn);
+            nr_free--;
         }
     }
 
-    pr_info("initialization complete.\n");
-    pr_info("total RAM: %lu MiB, usable: %lu MiB, used: %lu KiB\n",
-            (total_pages_managed * PAGE_SIZE) / (1024 * 1024),
-            (free_pages_count * PAGE_SIZE) / (1024 * 1024),
-            (used_pages_count * PAGE_SIZE) / 1024);
+    pr_debug("reserved %lu pages for kernel\n",
+             kernel_end_pfn - kernel_start_pfn);
+
+    u64 metadata_start_pfn = metadata_phys >> PAGE_SHIFT;
+    u64 metadata_pages = (metadata_size + PAGE_SIZE - 1) >> PAGE_SHIFT;
+
+    for (u64 i = 0; i < metadata_pages; i++) {
+        u64 pfn = metadata_start_pfn + i;
+        if (!__test_bit(pfn)) {
+            __set_bit(pfn);
+            nr_free--;
+        }
+    }
+
+    pr_debug("reserved %lu pages for allocator metadata\n", metadata_pages);
 }
 
-// --- Allocation and Deallocation Functions ---
+void mem_init(volatile struct limine_memmap_request *memmap_request) {
+    struct limine_memmap_response *memmap;
+    u64 hhdm_offset;
+    phys_addr_t kernel_end;
+    phys_addr_t metadata_phys;
+    size_t bitmap_size, mem_map_size, metadata_size;
 
-void *pmm_alloc_page(void) { return pmm_alloc_contiguous_pages(1); }
+    if (!memmap_request || !memmap_request->response)
+        panic("invalid memmap request", NULL);
 
-void *pmm_alloc_contiguous_pages(size_t num_pages) {
-    // TODO: Add locking for SMP safety
+    if (!hhdm_request.response)
+        panic("HHDM not available", NULL);
 
-    if (page_bitmap == NULL || num_pages == 0) {
-        pr_warn("alloc failed: PMM not initialized or zero pages requested.\n");
-        return NULL;
+    memmap = memmap_request->response;
+    hhdm_offset = hhdm_request.response->offset;
+
+    pr_debug("HHDM offset: 0x%lx\n", hhdm_offset);
+    pr_debug("memory map entries: %lu\n", memmap->entry_count);
+
+    max_pfn = 0;
+    for (u64 i = 0; i < memmap->entry_count; i++) {
+        struct limine_memmap_entry *entry = memmap->entries[i];
+
+        if (entry->type == LIMINE_MEMMAP_USABLE ||
+            entry->type == LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE) {
+            u64 end_addr = entry->base + entry->length;
+            u64 end_pfn = (end_addr + PAGE_SIZE - 1) >> PAGE_SHIFT;
+
+            if (end_pfn > max_pfn)
+                max_pfn = end_pfn;
+        }
     }
 
-    if (free_pages_count < num_pages) {
-        pr_warn("alloc failed: not enough free memory (requested %lu pages, "
-                "%lu available).\n",
-                num_pages, free_pages_count);
-        return NULL;
-    }
+    if (!max_pfn)
+        panic("no usable memory found", NULL);
 
-    s64 start_page_index = bitmap_find_first_free_block(num_pages);
+    pr_debug("managing %lu pages (0x%lx bytes)\n", max_pfn,
+             max_pfn << PAGE_SHIFT);
 
-    if (start_page_index == -1) {
-        pr_warn(
-            "alloc failed: could not find a contiguous block of %lu pages.\n",
-            num_pages);
-        return NULL;
-    }
+    bitmap_size = (max_pfn + 63) / 64 * sizeof(unsigned long);
+    mem_map_size = max_pfn * sizeof(struct page);
+    metadata_size = bitmap_size + mem_map_size;
 
-    // Mark pages as used in bitmap and update counts
-    for (size_t i = 0; i < num_pages; i++) {
-        bitmap_set_page(start_page_index + i);
-    }
+    pr_debug("bitmap size: %lu bytes\n", bitmap_size);
+    pr_debug("mem_map size: %lu bytes\n", mem_map_size);
+    pr_debug("total metadata: %lu KiB\n", metadata_size / 1024);
 
-    free_pages_count -= num_pages;
-    used_pages_count += num_pages;
+    kernel_end = __get_kernel_end(memmap_request);
+    pr_debug("kernel ends at: 0x%lx\n", kernel_end);
 
-    void *allocated_address = (void *)((u64)start_page_index * PAGE_SIZE);
-    pr_debug("allocated %lu pages at physical address %p\n", num_pages,
-             allocated_address);
+    metadata_phys =
+        __find_metadata_location(memmap_request, kernel_end, metadata_size);
+    if (!metadata_phys)
+        panic("cannot allocate space for PMM metadata", NULL);
 
-    return allocated_address;
+    pr_info("metadata at physical 0x%lx\n", metadata_phys);
+
+    bitmap = (unsigned long *)(hhdm_offset + metadata_phys);
+
+    for (size_t i = 0; i < bitmap_size / sizeof(unsigned long); i++)
+        bitmap[i] = 0;
+
+    __reserve_system_pages(memmap_request, kernel_end, metadata_phys,
+                           metadata_size);
+
+    __init_mem_map(hhdm_offset, metadata_phys + bitmap_size);
+
+    pr_info("initialization complete\n");
+    pr_info("total: %lu MiB, free: %lu MiB, used: %lu MiB\n",
+            (max_pfn << PAGE_SHIFT) >> 20, (nr_free << PAGE_SHIFT) >> 20,
+            ((max_pfn - nr_free) << PAGE_SHIFT) >> 20);
 }
 
-void pmm_free_page(void *p_addr) { pmm_free_contiguous_pages(p_addr, 1); }
+struct page *alloc_pages(u32 order) {
+    size_t count = 1UL << order;
+    s64 start_pfn;
 
-void pmm_free_contiguous_pages(void *p_addr, size_t num_pages) {
-    if (page_bitmap == NULL || p_addr == NULL || num_pages == 0) {
+    if (!bitmap) {
+        pr_warn("allocator not initialized\n");
+        return NULL;
+    }
+
+    if (nr_free < count) {
+        pr_warn("out of memory (need %lu pages, have %lu)\n", count, nr_free);
+        return NULL;
+    }
+
+    start_pfn = __find_free_pages(count);
+    if (start_pfn < 0) {
+        pr_warn("cannot find %lu contiguous pages\n", count);
+        return NULL;
+    }
+
+    __mark_pages_inuse(start_pfn, count);
+
+    pr_debug("allocated %lu pages at PFN 0x%lx\n", count, start_pfn);
+
+    return &mem_map[start_pfn];
+}
+
+void free_pages(struct page *page, u32 order) {
+    size_t count = 1UL << order;
+    u64 start_pfn;
+
+    if (!bitmap || !page)
+        return;
+
+    start_pfn = page->pfn;
+
+    if (start_pfn >= max_pfn) {
+        pr_warn("invalid page frame number 0x%lx\n", start_pfn);
         return;
     }
 
-    u64 physical_address = (u64)p_addr;
-    if (physical_address % PAGE_SIZE != 0) {
-        pr_warn("attempted to free unaligned physical address %p\n", p_addr);
-        return;
-    }
-
-    u64 start_page_index = physical_address / PAGE_SIZE;
-
-    // TODO: Add locking for SMP safety
-
-    for (size_t i = 0; i < num_pages; i++) {
-        u64 current_page_index = start_page_index + i;
-        if (current_page_index >= total_pages_managed) {
-            pr_warn("attempted to free page index %lu which is out of bounds "
-                    "(%lu).\n",
-                    current_page_index, total_pages_managed);
-            break;
-        }
-        if (!bitmap_is_page_used(current_page_index)) {
-            pr_warn("double free detected for page at physical address 0x%lx\n",
-                    (u64)current_page_index * PAGE_SIZE);
+    for (size_t i = 0; i < count; i++) {
+        if (!__test_bit(start_pfn + i)) {
+            pr_warn("double free detected at PFN 0x%lx\n", start_pfn + i);
             return;
-        } else {
-            bitmap_clear_page(current_page_index);
-
-            free_pages_count++;
-            used_pages_count--;
         }
     }
+
+    __mark_pages_free(start_pfn, count);
+
+    pr_debug("freed %lu pages at PFN 0x%lx\n", count, start_pfn);
 }
 
-// --- Getter Functions ---
+phys_addr_t page_to_phys(struct page *page) {
+    if (!page)
+        return 0;
+    return page->pfn << PAGE_SHIFT;
+}
 
-u64 pmm_get_total_memory(void) { return total_pages_managed * PAGE_SIZE; }
+struct page *phys_to_page(phys_addr_t phys) {
+    u64 pfn = phys >> PAGE_SHIFT;
 
-u64 pmm_get_free_memory(void) { return free_pages_count * PAGE_SIZE; }
+    if (pfn >= max_pfn)
+        return NULL;
 
-u64 pmm_get_used_memory(void) { return used_pages_count * PAGE_SIZE; }
+    return &mem_map[pfn];
+}
+
+u64 totalram_pages(void) { return max_pfn << PAGE_SHIFT; }
+
+u64 freeram_pages(void) { return nr_free << PAGE_SHIFT; }
+
+u64 usedram_pages(void) { return (max_pfn - nr_free) << PAGE_SHIFT; }
