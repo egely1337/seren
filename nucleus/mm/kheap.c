@@ -1,16 +1,11 @@
+#define pr_fmt(fmt) "kheap: " fmt
+
 #include <lib/string.h>
 #include <nucleus/mm/kheap.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/panic.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
-
-#define KHEAP_PFX "kheap: "
-
-#define kheap_info(fmt, ...) pr_info(KHEAP_PFX fmt, ##__VA_ARGS__)
-#define kheap_warn(fmt, ...) pr_warn(KHEAP_PFX fmt, ##__VA_ARGS__)
-#define kheap_err(fmt, ...)  pr_err(KHEAP_PFX fmt, ##__VA_ARGS__)
-#define kheap_dbg(fmt, ...)  pr_debug(KHEAP_PFX fmt, ##__VA_ARGS__)
 
 #define HEAP_ALIGNMENT sizeof(void *)
 
@@ -35,11 +30,11 @@ static uintptr_t g_heap_end_addr = 0;
 static size_t g_heap_total_size = 0;
 
 int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
-    kheap_info("initializing kernel heap.\n");
+    pr_info("initializing kernel heap.\n");
 
     if (!initial_pool_start ||
         initial_pool_size < (HEADER_SIZE + HEAP_ALIGNMENT)) {
-        kheap_err("initial pool is too small or NULL.");
+        pr_err("initial pool is too small or NULL.");
         return -1;
     }
 
@@ -49,7 +44,7 @@ int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
 
     if (alignment_diff > initial_pool_size ||
         initial_pool_size - alignment_diff < (HEADER_SIZE + HEAP_ALIGNMENT)) {
-        kheap_err("initial pool is too small after aligning start address.\n");
+        pr_err("initial pool is too small after aligning start address.\n");
         g_heap_start_addr = 0;
         return -1;
     }
@@ -64,10 +59,10 @@ int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
     g_free_list_head->prev_phys = NULL;
     g_free_list_head->next_phys = NULL;
 
-    kheap_info("heap initialized at 0x%p, size: %lu KiB\n",
-               (void *)g_heap_start_addr, g_heap_total_size / 1024);
-    kheap_dbg("first free block created, size: %lu bytes.\n",
-              g_free_list_head->size);
+    pr_info("heap initialized at 0x%p, size: %lu KiB\n",
+            (void *)g_heap_start_addr, g_heap_total_size / 1024);
+    pr_debug("first free block created, size: %lu bytes.\n",
+             g_free_list_head->size);
 
     return 0;
 }
@@ -76,13 +71,12 @@ void *kmalloc(size_t size) {
     // TODO: Add a spinlock here for SMP safety
 
     if (size == 0) {
-        kheap_warn("kmalloc(0) called.\n");
+        pr_warn("kmalloc(0) called.\n");
         return NULL;
     }
 
     if (!g_free_list_head) {
-        kheap_warn(
-            "kmalloc called before heap is initialized or heap is full.\n");
+        pr_warn("kmalloc called before heap is initialized or heap is full.\n");
         return NULL;
     }
 
@@ -133,8 +127,7 @@ void *kmalloc(size_t size) {
             }
 
             void *user_ptr = (void *)((uintptr_t)current + HEADER_SIZE);
-            kheap_dbg("allocated %lu bytes at %p\n", actual_data_size,
-                      user_ptr);
+            pr_debug("allocated %lu bytes at %p\n", actual_data_size, user_ptr);
             return user_ptr;
         }
 
@@ -142,7 +135,7 @@ void *kmalloc(size_t size) {
         current = current->next_free;
     }
 
-    kheap_warn("failed to find suitable block for size %lu (aligned %u).\n");
+    pr_warn("failed to find suitable block for size %lu (aligned %u).\n");
 
     // TODO: Implement heap expansion.
     return NULL;
@@ -159,12 +152,12 @@ void kfree(void *ptr) {
         (heap_block_header_t *)((uintptr_t)ptr - HEADER_SIZE);
 
     if (header->is_free) {
-        panic(KHEAP_PFX "double free detected for pointer %p!\n", ptr);
+        panic("double free detected for pointer %p!\n", ptr);
         return;
     }
 
     header->is_free = true;
-    kheap_dbg("freed block at %p, size %lu\n", ptr, header->size);
+    pr_debug("freed block at %p, size %lu\n", ptr, header->size);
 
     if (header->next_phys && header->next_phys->is_free) {
         heap_block_header_t *curr_free = g_free_list_head;
@@ -196,8 +189,8 @@ void *kcalloc(size_t num, size_t size) {
     size_t total_size = num * size;
 
     if (size != 0 && total_size / size != num) {
-        kheap_warn("integer overflow detected in kcalloc(num=%lu, size=%lu)",
-                   num, size);
+        pr_warn("integer overflow detected in kcalloc(num=%lu, size=%lu)", num,
+                size);
         return NULL;
     }
 

@@ -1,14 +1,10 @@
+#define pr_fmt(fmt) "sched: " fmt
+
 #include <lib/string.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/panic.h>
 #include <nucleus/printk.h>
 #include <nucleus/sched/sched.h>
-
-#define SCHED_PFX "sched: "
-
-#define sched_info(fmt, ...) pr_info(SCHED_PFX fmt, ##__VA_ARGS__)
-#define sched_dbg(fmt, ...)  pr_debug(SCHED_PFX fmt, ##__VA_ARGS__)
-#define sched_err(fmt, ...)  pr_err(SCHED_PFX fmt, ##__VA_ARGS__)
 
 static task_t g_task_table[MAX_TASKS];
 static volatile pid_t g_current_task_id = 0;
@@ -18,8 +14,8 @@ static volatile pid_t g_highest_pid = 0;
 #define KERNEL_DATA_SEGMENT 0x30
 
 static void task_exit(void) {
-    sched_dbg("task %u ('%s') is exiting\n", g_current_task_id,
-              g_task_table[g_current_task_id].name);
+    pr_debug("task %u ('%s') is exiting\n", g_current_task_id,
+             g_task_table[g_current_task_id].name);
 
     interrupts_disable();
     g_task_table[g_current_task_id].state = TASK_STATE_DEAD;
@@ -40,8 +36,7 @@ void sched_init(void) {
     idle_task->state = TASK_STATE_RUNNING;
     g_current_task_id = idle_pid;
 
-    sched_info("initialized; idle task created with PID %u\n",
-               g_current_task_id);
+    pr_info("initialized; idle task created with PID %u\n", g_current_task_id);
 }
 
 pid_t create_task(const char *name, void (*entry_point)(void)) {
@@ -50,7 +45,7 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
     pid_t new_pid = -1;
     // TODO: Implement task slot reuse by searching for TASK_STATE_DEAD
     if (g_highest_pid >= MAX_TASKS) {
-        sched_err("failed to create task '%s': max tasks reached\n", name);
+        pr_err("failed to create task '%s': max tasks reached\n", name);
         interrupt_restore(flags);
         return -1;
     }
@@ -63,7 +58,7 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
 
     void *stack = pmm_alloc_page();
     if (!stack) {
-        sched_err("failed to create task '%s': out of physical memory\n", name);
+        pr_err("failed to create task '%s': out of physical memory\n", name);
         g_highest_pid--;
         interrupt_restore(flags);
         return -1;
@@ -89,7 +84,7 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
     new_task->stack_pointer = (uintptr_t)context;
     new_task->state = TASK_STATE_READY;
 
-    sched_info("created task '%s' with PID %u\n", name, new_pid);
+    pr_info("created task '%s' with PID %u\n", name, new_pid);
 
     interrupt_restore(flags);
     return new_pid;
@@ -109,7 +104,7 @@ uintptr_t schedule(uintptr_t current_stack_pointer) {
             g_current_task_id = next_task_id;
             g_task_table[g_current_task_id].state = TASK_STATE_RUNNING;
 
-            /*sched_dbg("switching to task %u ('%s')\n", g_current_task_id,
+            /*pr_debug("switching to task %u ('%s')\n", g_current_task_id,
                       g_task_table[g_current_task_id].name);*/
             // FUCKS UP THE CONSOLE SO I COMMENTED IT, BUT IT WORKS.
             return g_task_table[g_current_task_id].stack_pointer;

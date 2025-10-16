@@ -1,5 +1,5 @@
-#ifndef NUCLEUS_PRINTK_H
-#define NUCLEUS_PRINTK_H
+#ifndef _NUCLEUS_PRINTK_H
+#define _NUCLEUS_PRINTK_H
 
 #include <lib/stdarg.h>
 
@@ -12,28 +12,28 @@
 #define KERN_INFO   "<6>" /* Informational */
 #define KERN_DEBUG  "<7>" /* Debug-level messages */
 
-#define pr_emerg(fmt, ...)  printk(KERN_EMERG fmt, ##__VA_ARGS__)
-#define pr_alert(fmt, ...)  printk(KERN_ALERT fmt, ##__VA_ARGS__)
-#define pr_crit(fmt, ...)   printk(KERN_CRIT fmt, ##__VA_ARGS__)
-#define pr_err(fmt, ...)    printk(KERN_ERR fmt, ##__VA_ARGS__)
-#define pr_warn(fmt, ...)   printk(KERN_WARN fmt, ##__VA_ARGS__)
-#define pr_notice(fmt, ...) printk(KERN_NOTICE fmt, ##__VA_ARGS__)
-#define pr_info(fmt, ...)   printk(KERN_INFO fmt, ##__VA_ARGS__)
-#define pr_debug(fmt, ...)  printk(KERN_DEBUG fmt, ##__VA_ARGS__)
-
-#define DEFAULT_MESSAGE_LOGLEVEL KERN_INFO
+#ifndef pr_fmt
+#define pr_fmt(fmt) fmt
+#endif
 
 /**
- * @brief Kernel print function.
+ * printk - The core kernel printing function.
  *
- * Prints a formatted string to configured kernel message outputs (e.g.,
- * console, serial). Supports a subset of printf format specifiers.
- *
- * @param fmt The format string, similar to printf.
- * Can optionally start with a log level string (e.g., KERN_ERR).
- * @param ... Variable arguments matching the format string.
- * @return The number of characters printed, or a negative value on error.
+ * Prints a formatted string to the kernel log buffer and console.
+ * It is recommended to use the pr_* convenience macros instead of
+ * calling printk() directly.
  */
 int printk(const char *fmt, ...);
 
-#endif // NUCLEUS_PRINTK_H
+#define pr_emerg(fmt, ...)  printk(KERN_EMERG pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_alert(fmt, ...)  printk(KERN_ALERT pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_crit(fmt, ...)   printk(KERN_CRIT pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_err(fmt, ...)    printk(KERN_ERR pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_warn(fmt, ...)   printk(KERN_WARN pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_notice(fmt, ...) printk(KERN_NOTICE pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_info(fmt, ...)   printk(KERN_INFO pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_debug(fmt, ...)  printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
+
+#define DEFAULT_MESSAGE_LOGLEVEL KERN_INFO
+
+#endif // _NUCLEUS_PRINTK_H

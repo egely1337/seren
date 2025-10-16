@@ -1,16 +1,11 @@
+#define pr_fmt(fmt) "irq: " fmt
+
 #include <nucleus/interrupt.h>
 #include <nucleus/printk.h>
 #include <nucleus/sched/sched.h>
 #include <nucleus/stddef.h>
 #include <nucleus/types.h>
 #include <pic.h>
-
-#define IRQ_PFX "irq: "
-
-#define irq_info(fmt, ...) pr_info(IRQ_PFX fmt, ##__VA_ARGS__)
-#define irq_warn(fmt, ...) pr_warn(IRQ_PFX fmt, ##__VA_ARGS__)
-#define irq_err(fmt, ...)  pr_err(IRQ_PFX fmt, ##__VA_ARGS__)
-#define irq_dbg(fmt, ...)  pr_debug(IRQ_PFX fmt, ##__VA_ARGS__)
 
 // This is our array of function pointers. Think of it as a dispatch table.
 // When an IRQ (0-15) comes in, we'll look up the corresponding function
@@ -20,17 +15,17 @@ static irq_c_handler_t s_irq_c_routines[16] = {0};
 
 void interrupt_register_irq_handler(u8 irq_line, irq_c_handler_t handler) {
     if (irq_line < 16) {
-        irq_dbg("registering handler for line %u at %p\n", irq_line, handler);
+        pr_debug("registering handler for line %u at %p\n", irq_line, handler);
         s_irq_c_routines[irq_line] = handler;
     } else {
-        irq_warn("attempted to register handler for invalid line %u\n",
-                 irq_line);
+        pr_warn("attempted to register handler for invalid line %u\n",
+                irq_line);
     }
 }
 
 void interrupt_unregister_irq_handler(u8 irq_line) {
     if (irq_line < 16) {
-        irq_dbg("unregistering handler for line %u\n", irq_line);
+        pr_debug("unregistering handler for line %u\n", irq_line);
         s_irq_c_routines[irq_line] = NULL;
     }
 }
@@ -49,24 +44,24 @@ void irq_c_dispatcher(irq_context_t *frame) {
         // IRQ came from the slave PIC (IRQ 8-15)
         original_irq_line = (frame->vector_number - PIC_IRQ_OFFSET_SLAVE) + 8;
     } else {
-        irq_err("received unmappable interrupt vector %lu!\n",
-                frame->vector_number);
+        pr_err("received unmappable interrupt vector %lu!\n",
+               frame->vector_number);
         return;
     }
 
     if (original_irq_line == 7) { // Potentially spurious IRQ from Master PIC
         u8 master_isr = pic_read_master_isr();
         if (!(master_isr & (1 << 7))) {
-            irq_warn("spurious IRQ7 detected (vector %lu), ignoring.\n",
-                     frame->vector_number);
+            pr_warn("spurious IRQ7 detected (vector %lu), ignoring.\n",
+                    frame->vector_number);
             return;
         }
     } else if (original_irq_line == 15) {
         u8 slave_isr = pic_read_slave_isr();
 
         if (!(slave_isr & (1 << 7))) {
-            irq_warn("spurious IRQ15 detected (vector %lu), ignoring.\n",
-                     frame->vector_number);
+            pr_warn("spurious IRQ15 detected (vector %lu), ignoring.\n",
+                    frame->vector_number);
             pic_send_eoi(2);
             return;
         }
@@ -75,8 +70,8 @@ void irq_c_dispatcher(irq_context_t *frame) {
     if (s_irq_c_routines[original_irq_line] != NULL) {
         s_irq_c_routines[original_irq_line](frame);
     } else {
-        irq_warn("unhandled IRQ on line %u (vector %lu)\n", original_irq_line,
-                 frame->vector_number);
+        pr_warn("unhandled IRQ on line %u (vector %lu)\n", original_irq_line,
+                frame->vector_number);
     }
 
     // Important! Tell the PIC that we've finished handling this interrupt.

@@ -1,10 +1,9 @@
+#define pr_fmt(fmt) "idt: " fmt
+
 #include <idt.h>
 #include <nucleus/printk.h>
 #include <nucleus/types.h>
 #include <pic.h>
-
-#define IDT_PFX           "idt: "
-#define idt_dbg(fmt, ...) pr_debug(IDT_PFX fmt, ##__VA_ARGS__)
 
 static idt_entry_t idt[IDT_MAX_DESCRIPTORS];
 static idt_ptr_t idtp;
@@ -30,8 +29,8 @@ void idt_init(void) {
     idtp.base = (u64)&idt[0];
     idtp.limit = (u16)(sizeof(idt_entry_t) * IDT_MAX_DESCRIPTORS - 1);
 
-    idt_dbg("table cleared. base: 0x%p, limit: 0x%x\n", (void *)idtp.base,
-            idtp.limit);
+    pr_debug("table cleared. base: 0x%p, limit: 0x%x\n", (void *)idtp.base,
+             idtp.limit);
 
     for (int i = 0; i < IDT_MAX_DESCRIPTORS; i++) {
         idt_set_gate(i, 0, 0, 0, 0);
@@ -116,5 +115,5 @@ void idt_init(void) {
                  irq_gate_attributes, 0);
 
     idt_load(&idtp);
-    idt_dbg("IDT loaded.\n");
+    pr_debug("IDT loaded.\n");
 }
