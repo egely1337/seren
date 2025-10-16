@@ -110,8 +110,8 @@ irq_stub_0:
     push r15
 
     mov rdi, rsp
-    extern irq_c_dispatcher
-    call irq_c_dispatcher
+    extern do_irq
+    call do_irq
 
     mov rdi, rsp
     extern schedule
@@ -157,8 +157,8 @@ common_irq_dispatcher_stub:
     push r15
 
     mov rdi, rsp
-    extern irq_c_dispatcher
-    call irq_c_dispatcher
+    extern do_irq
+    call do_irq
 
     pop r15
     pop r14

@@ -38,12 +38,12 @@ const char *exception_messages[] = {"Divide by Zero Error",
                                     "SIMD Floating-Point Exception",
                                     "Virtualization Exception",
                                     "Control Protection Exception"};
-void exception_handler(irq_context_t *frame) {
+void exception_handler(struct pt_regs *frame) {
     const char *message = "Unknown Exception";
 
-    if (frame->vector_number < (sizeof(exception_messages) / sizeof(char *)) &&
-        exception_messages[frame->vector_number] != NULL) {
-        message = exception_messages[frame->vector_number];
+    if (frame->vector < (sizeof(exception_messages) / sizeof(char *)) &&
+        exception_messages[frame->vector] != NULL) {
+        message = exception_messages[frame->vector];
     }
 
     panic(message, frame);

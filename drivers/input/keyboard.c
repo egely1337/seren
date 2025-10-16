@@ -37,7 +37,7 @@ static const char g_scancode_map_upper[SCANCODE_MAX] = {
 static bool g_shift_pressed = false;
 static bool g_capslock_on = false;
 
-static void keyboard_irq_handler(irq_context_t *context
+static void keyboard_irq_handler(struct pt_regs *context
                                  __attribute__((unused))) {
     u8 scancode = inb(0x60);
 
@@ -83,21 +83,19 @@ static void keyboard_irq_handler(irq_context_t *context
     }
 }
 
-void keyboard_init(void) {
-    interrupt_register_irq_handler(1, keyboard_irq_handler);
-}
+void keyboard_init(void) { request_irq(1, keyboard_irq_handler); }
 
 char keyboard_getchar(void) {
     while (g_kbd_buffer_head == g_kbd_buffer_tail) {
         __asm__ volatile("hlt");
     }
 
-    u64 flags = interrupt_save_and_disable();
+    u64 flags = local_irq_save();
 
     char c = g_kbd_buffer[g_kbd_buffer_tail];
     g_kbd_buffer_tail = (g_kbd_buffer_tail + 1) % KBD_BUFFER_SIZE;
 
-    interrupt_restore(flags);
+    local_irq_restore(flags);
 
     return c;
 }

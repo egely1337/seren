@@ -86,12 +86,7 @@ void pic_unmask_irq(u8 irq_line) {
     outb(port, value);
 }
 
-u8 pic_read_master_isr(void) {
+u8 pic_read_isr(void) {
     outb(PIC1_COMMAND_PORT, PIC_OCW3_READ_ISR);
     return inb(PIC1_COMMAND_PORT);
-}
-
-u8 pic_read_slave_isr(void) {
-    outb(PIC2_COMMAND_PORT, PIC_OCW3_READ_ISR);
-    return inb(PIC2_COMMAND_PORT);
 }

@@ -7,77 +7,58 @@
 #include <nucleus/types.h>
 #include <pic.h>
 
-// This is our array of function pointers. Think of it as a dispatch table.
-// When an IRQ (0-15) comes in, we'll look up the corresponding function
-// in this array and call it.
-// We start with all entries as NULL, meaning no handler is registered yet.
-static irq_c_handler_t s_irq_c_routines[16] = {0};
+static irq_handler_t __irq_handlers[16] = {NULL};
 
-void interrupt_register_irq_handler(u8 irq_line, irq_c_handler_t handler) {
-    if (irq_line < 16) {
-        pr_debug("registering handler for line %u at %p\n", irq_line, handler);
-        s_irq_c_routines[irq_line] = handler;
-    } else {
-        pr_warn("attempted to register handler for invalid line %u\n",
-                irq_line);
-    }
-}
+void do_irq(struct pt_regs *regs) {
+    u32 irq = regs->vector - PIC_IRQ_OFFSET_MASTER;
 
-void interrupt_unregister_irq_handler(u8 irq_line) {
-    if (irq_line < 16) {
-        pr_debug("unregistering handler for line %u\n", irq_line);
-        s_irq_c_routines[irq_line] = NULL;
-    }
-}
+    if (irq >= 8)
+        pic_send_eoi(8);
+    pic_send_eoi(irq);
 
-void irq_c_dispatcher(irq_context_t *frame) {
-    u8 original_irq_line;
-
-    // Convert the IDT vector number (which is what the CPU gives us)
-    // back to the original IRQ line number (0-15) that the PIC uses.
-    if (frame->vector_number >= PIC_IRQ_OFFSET_MASTER &&
-        frame->vector_number < (PIC_IRQ_OFFSET_MASTER + 8)) {
-        // IRQ came from the master PIC (IRQ 0-8)
-        original_irq_line = frame->vector_number - PIC_IRQ_OFFSET_MASTER;
-    } else if (frame->vector_number >= PIC_IRQ_OFFSET_SLAVE &&
-               frame->vector_number < (PIC_IRQ_OFFSET_SLAVE + 8)) {
-        // IRQ came from the slave PIC (IRQ 8-15)
-        original_irq_line = (frame->vector_number - PIC_IRQ_OFFSET_SLAVE) + 8;
-    } else {
-        pr_err("received unmappable interrupt vector %lu!\n",
-               frame->vector_number);
+    if (irq == 7 && !(pic_read_isr() & (1 << 7))) {
+        pr_debug("spurious IRQ7 detected, ignoring\n");
         return;
     }
 
-    if (original_irq_line == 7) { // Potentially spurious IRQ from Master PIC
-        u8 master_isr = pic_read_master_isr();
-        if (!(master_isr & (1 << 7))) {
-            pr_warn("spurious IRQ7 detected (vector %lu), ignoring.\n",
-                    frame->vector_number);
-            return;
-        }
-    } else if (original_irq_line == 15) {
-        u8 slave_isr = pic_read_slave_isr();
+    if (__irq_handlers[irq])
+        __irq_handlers[irq](regs);
+    else
+        pr_warn("unhandled IRQ %u\n", irq);
+}
 
-        if (!(slave_isr & (1 << 7))) {
-            pr_warn("spurious IRQ15 detected (vector %lu), ignoring.\n",
-                    frame->vector_number);
-            pic_send_eoi(2);
-            return;
-        }
+int request_irq(u32 irq, irq_handler_t handler) {
+    unsigned long flags;
+
+    if (irq >= 16 || !handler) {
+        return -1;
     }
 
-    if (s_irq_c_routines[original_irq_line] != NULL) {
-        s_irq_c_routines[original_irq_line](frame);
-    } else {
-        pr_warn("unhandled IRQ on line %u (vector %lu)\n", original_irq_line,
-                frame->vector_number);
+    flags = local_irq_save();
+    if (__irq_handlers[irq]) {
+        local_irq_restore(flags);
+        return -1;
     }
 
-    // Important! Tell the PIC that we've finished handling this interrupt.
-    // If we don't do this, the PIC might not send any more interrupts from this
-    // line or lower-priority lines.
-    if (original_irq_line != 0xFF) {
-        pic_send_eoi(original_irq_line);
-    }
+    __irq_handlers[irq] = handler;
+    local_irq_restore(flags);
+
+    enable_irq(irq);
+    pr_debug("registered handler for IRQ %u\n", irq);
+
+    return 0;
+}
+
+void free_irq(u32 irq) {
+    unsigned long flags;
+
+    if (irq >= 16)
+        return;
+
+    disable_irq(irq);
+    flags = local_irq_save();
+    __irq_handlers[irq] = NULL;
+    local_irq_restore(flags);
+
+    pr_debug("unregistered handler for IRQ %u\n", irq);
 }

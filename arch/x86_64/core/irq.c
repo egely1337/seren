@@ -2,26 +2,6 @@
 #include <nucleus/types.h>
 #include <pic.h>
 
-void interrupts_enable(void) { __asm__ volatile("sti"); }
-void interrupts_disable(void) { __asm__ volatile("cli"); }
+void enable_irq(u32 irq) { pic_unmask_irq(irq); }
 
-u64 interrupt_save_and_disable(void) {
-    u64 flags;
-    __asm__ volatile("pushfq \n\t"
-                     "pop %0 \n\t"
-                     "cli"
-                     : "=r"(flags)
-                     :
-                     : "memory");
-    return flags;
-}
-
-void interrupt_restore(u64 flags) {
-    __asm__ volatile("push %0 \n\t"
-                     "popfq"
-                     :
-                     : "r"(flags)
-                     : "memory");
-}
-
-void irq_unmask(u8 irq_line) { pic_unmask_irq(irq_line); }
+void disable_irq(u32 irq) { pic_mask_irq(irq); }

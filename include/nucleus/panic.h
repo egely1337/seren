@@ -6,7 +6,7 @@
 /**
  * @brief Halts the kernel.
  */
-void panic(const char *message, irq_context_t *context)
+void panic(const char *message, struct pt_regs *context)
     __attribute__((noreturn));
 
 #endif // NUCLEUS_PANIC_H

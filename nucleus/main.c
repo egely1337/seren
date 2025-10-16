@@ -1,4 +1,5 @@
 #include <arch.h>
+#include <asm/irqflags.h>
 #include <drivers/input/keyboard.h>
 #include <drivers/pit.h>
 #include <limine.h>
@@ -8,6 +9,7 @@
 #include <nucleus/sched/sched.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/types.h>
+#include <pic.h>
 
 __attribute__((
     used,
@@ -38,19 +40,20 @@ void kmain(void) {
     pr_info("Timer driver initialized.\n");
 
     // TODO: Move this behind an arch-independent API
-    irq_unmask(1);
+    pic_unmask_irq(1);
     pr_info("Unmasked Keyboard (IRQ1).\n");
 
-    irq_unmask(0);
+    pic_unmask_irq(0);
     pr_info("Unmasked Timer (IRQ0).\n");
 
     sched_init();
 
-    interrupts_enable();
+    local_irq_enable();
 
     pr_info("Initialization sequence complete. You can now type. See you <3\n");
 
     while (1) {
-        __asm__ volatile("hlt");
+        char c = keyboard_getchar();
+        printk("%c", c);
     }
 }

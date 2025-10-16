@@ -22,7 +22,7 @@ void timer_init(void) {
     outb(0x40, (u8)divisor & 0xFF);
     outb(0x40, (u8)(divisor >> 8) & 0xFF);
 
-    interrupt_register_irq_handler(TIMER_IRQ, (irq_c_handler_t)timer_handler);
+    request_irq(TIMER_IRQ, (irq_handler_t)timer_handler);
     pr_info("initialized with %u Hz frequency\n", frequency);
 }
 
