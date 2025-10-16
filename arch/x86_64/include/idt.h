@@ -1,21 +1,21 @@
 #ifndef IDT_H
 #define IDT_H
 
-#include <lib/stdint.h>
+#include <nucleus/types.h>
 
 typedef struct idt_entry {
-    uint16_t isr_low;
-    uint16_t kernel_cs;
-    uint8_t ist;
-    uint8_t attributes;
-    uint16_t isr_mid;
-    uint32_t isr_high;
-    uint32_t reserved;
+    u16 isr_low;
+    u16 kernel_cs;
+    u8 ist;
+    u8 attributes;
+    u16 isr_mid;
+    u32 isr_high;
+    u32 reserved;
 } __attribute__((packed)) idt_entry_t;
 
 typedef struct idt_ptr {
-    uint16_t limit;
-    uint64_t base;
+    u16 limit;
+    u64 base;
 } __attribute__((packed)) idt_ptr_t;
 
 #define IDT_MAX_DESCRIPTORS 256
@@ -32,8 +32,8 @@ typedef struct idt_ptr {
  */
 void idt_init(void);
 
-void idt_set_gate(uint8_t vector_num, uint64_t isr_address,
-                  uint16_t cs_selector, uint8_t attributes, uint8_t ist);
+void idt_set_gate(u8 vector_num, u64 isr_address, u16 cs_selector,
+                  u8 attributes, u8 ist);
 
 // Exception ISRs
 extern void isr0(void);  // Divide by Zero Error

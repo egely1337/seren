@@ -10,7 +10,7 @@
 #include <nucleus/types.h>
 
 void test_task_1(void) {
-    uint64_t my_counter = 0;
+    u64 my_counter = 0;
     while (1) {
         pr_info("TASK 1 COUNT %lu\n", my_counter++);
 
@@ -20,7 +20,7 @@ void test_task_1(void) {
 }
 
 void test_task_2(void) {
-    uint64_t my_counter = 0;
+    u64 my_counter = 0;
     while (1) {
         pr_warn("--> TASK 2 COUNT %lu\n", my_counter++);
 

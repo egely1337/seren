@@ -45,7 +45,7 @@ void sched_init(void) {
 }
 
 pid_t create_task(const char *name, void (*entry_point)(void)) {
-    uint64_t flags = interrupt_save_and_disable();
+    u64 flags = interrupt_save_and_disable();
 
     pid_t new_pid = -1;
     // TODO: Implement task slot reuse by searching for TASK_STATE_DEAD
@@ -78,9 +78,9 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
 
     uintptr_t task_entry_stack_top = (uintptr_t)context;
     task_entry_stack_top -= 8;
-    *((uint64_t *)task_entry_stack_top) = (uint64_t)task_exit;
+    *((u64 *)task_entry_stack_top) = (u64)task_exit;
 
-    context->rip_cpu = (uint64_t)entry_point;
+    context->rip_cpu = (u64)entry_point;
     context->cs_cpu = KERNEL_CODE_SEGMENT;
     context->rflags_cpu = 0x202;
     context->rsp_cpu = task_entry_stack_top;

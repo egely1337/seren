@@ -1,15 +1,14 @@
 #include <io.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/tty/console.h>
-#include <lib/stdbool.h>
-#include <lib/stdint.h>
+#include <nucleus/types.h>
 
 #define SCANCODE_MAX 88
 
 #define KBD_BUFFER_SIZE 256
 static char g_kbd_buffer[KBD_BUFFER_SIZE];
-static volatile uint32_t g_kbd_buffer_head = 0;
-static volatile uint32_t g_kbd_buffer_tail = 0;
+static volatile u32 g_kbd_buffer_head = 0;
+static volatile u32 g_kbd_buffer_tail = 0;
 
 static const char g_scancode_map_lower[SCANCODE_MAX] = {
     0,   27,   '1',  '2', '3',  '4', '5', '6', '7', '8', '9', '0', '-',
@@ -40,7 +39,7 @@ static bool g_capslock_on = false;
 
 static void keyboard_irq_handler(irq_context_t *context
                                  __attribute__((unused))) {
-    uint8_t scancode = inb(0x60);
+    u8 scancode = inb(0x60);
 
     switch (scancode) {
     case SCANCODE_LSHIFT_MAKE:
@@ -76,7 +75,7 @@ static void keyboard_irq_handler(irq_context_t *context
     }
 
     if (character != 0) {
-        uint32_t next_head = (g_kbd_buffer_head + 1) % KBD_BUFFER_SIZE;
+        u32 next_head = (g_kbd_buffer_head + 1) % KBD_BUFFER_SIZE;
         if (next_head != g_kbd_buffer_tail) {
             g_kbd_buffer[g_kbd_buffer_head] = character;
             g_kbd_buffer_head = next_head;
@@ -93,7 +92,7 @@ char keyboard_getchar(void) {
         __asm__ volatile("hlt");
     }
 
-    uint64_t flags = interrupt_save_and_disable();
+    u64 flags = interrupt_save_and_disable();
 
     char c = g_kbd_buffer[g_kbd_buffer_tail];
     g_kbd_buffer_tail = (g_kbd_buffer_tail + 1) % KBD_BUFFER_SIZE;

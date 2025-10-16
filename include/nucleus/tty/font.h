@@ -1,8 +1,8 @@
 #ifndef FONT_H
 #define FONT_H
 
-#include <lib/stddef.h>
-#include <lib/stdint.h>
+#include <nucleus/stddef.h>
+#include <nucleus/types.h>
 
 typedef struct font_glyph {
     const unsigned char *bitmap;

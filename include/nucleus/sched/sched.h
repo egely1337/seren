@@ -6,7 +6,7 @@
 #define KERNEL_TASK_NAME "kernel_idle"
 #define MAX_TASKS        1337
 
-typedef int32_t pid_t;
+typedef s32 pid_t;
 
 typedef enum {
     TASK_STATE_DEAD = 0,

@@ -1,6 +1,7 @@
 #include <nucleus/interrupt.h>
 #include <nucleus/printk.h>
 #include <nucleus/sched/sched.h>
+#include <nucleus/stddef.h>
 #include <nucleus/types.h>
 #include <pic.h>
 
@@ -17,7 +18,7 @@
 // We start with all entries as NULL, meaning no handler is registered yet.
 static irq_c_handler_t s_irq_c_routines[16] = {0};
 
-void interrupt_register_irq_handler(uint8_t irq_line, irq_c_handler_t handler) {
+void interrupt_register_irq_handler(u8 irq_line, irq_c_handler_t handler) {
     if (irq_line < 16) {
         irq_dbg("registering handler for line %u at %p\n", irq_line, handler);
         s_irq_c_routines[irq_line] = handler;
@@ -27,7 +28,7 @@ void interrupt_register_irq_handler(uint8_t irq_line, irq_c_handler_t handler) {
     }
 }
 
-void interrupt_unregister_irq_handler(uint8_t irq_line) {
+void interrupt_unregister_irq_handler(u8 irq_line) {
     if (irq_line < 16) {
         irq_dbg("unregistering handler for line %u\n", irq_line);
         s_irq_c_routines[irq_line] = NULL;
@@ -35,7 +36,7 @@ void interrupt_unregister_irq_handler(uint8_t irq_line) {
 }
 
 void irq_c_dispatcher(irq_context_t *frame) {
-    uint8_t original_irq_line;
+    u8 original_irq_line;
 
     // Convert the IDT vector number (which is what the CPU gives us)
     // back to the original IRQ line number (0-15) that the PIC uses.
@@ -54,14 +55,14 @@ void irq_c_dispatcher(irq_context_t *frame) {
     }
 
     if (original_irq_line == 7) { // Potentially spurious IRQ from Master PIC
-        uint8_t master_isr = pic_read_master_isr();
+        u8 master_isr = pic_read_master_isr();
         if (!(master_isr & (1 << 7))) {
             irq_warn("spurious IRQ7 detected (vector %lu), ignoring.\n",
                      frame->vector_number);
             return;
         }
     } else if (original_irq_line == 15) {
-        uint8_t slave_isr = pic_read_slave_isr();
+        u8 slave_isr = pic_read_slave_isr();
 
         if (!(slave_isr & (1 << 7))) {
             irq_warn("spurious IRQ15 detected (vector %lu), ignoring.\n",

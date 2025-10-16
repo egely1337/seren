@@ -1,8 +1,8 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include <lib/stddef.h>
-#include <lib/stdint.h>
+#include <nucleus/stddef.h>
+#include <nucleus/types.h>
 
 /**
  * @brief Calculates the length of a null-terminated string.

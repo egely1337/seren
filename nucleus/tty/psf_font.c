@@ -20,9 +20,9 @@
 #define PSF1_STARTSEQ  0xFFFE
 
 typedef struct psf1_header {
-    uint8_t magic[2];
-    uint8_t mode;
-    uint8_t charsize;
+    u8 magic[2];
+    u8 mode;
+    u8 charsize;
 } __attribute__((packed)) psf1_header_t;
 
 typedef struct psf_font_internal_data {
@@ -88,7 +88,7 @@ static int current_font_char_height = 0;
 static int current_font_char_width = 8;
 static int current_font_num_glyphs = 0;
 static int current_font_bytes_per_glyph = 0;
-static const uint8_t *current_font_glyph_data = NULL;
+static const u8 *current_font_glyph_data = NULL;
 static int font_loaded_successfully = 0;
 
 extern const unsigned char _binary_resources_font_psf_start[];

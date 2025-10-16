@@ -1,18 +1,19 @@
 #include <nucleus/panic.h>
 #include <nucleus/printk.h>
+#include <nucleus/stddef.h>
 #include <nucleus/types.h>
 
 typedef struct {
-    uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
-    uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;
-    uint64_t interrupt_number;
-    uint64_t error_code;
+    u64 r15, r14, r13, r12, r11, r10, r9, r8;
+    u64 rdi, rsi, rbp, rbx, rdx, rcx, rax;
+    u64 interrupt_number;
+    u64 error_code;
 
-    uint64_t rip;
-    uint64_t cs;
-    uint64_t rflags;
-    uint64_t rsp;
-    uint64_t ss;
+    u64 rip;
+    u64 cs;
+    u64 rflags;
+    u64 rsp;
+    u64 ss;
 } __attribute__((packed)) interrupt_frame_t;
 
 const char *exception_messages[] = {"Divide by Zero Error",

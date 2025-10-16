@@ -8,7 +8,7 @@
 
 #define pit_info(fmt, ...) pr_info(PIT_PFX fmt, ##__VA_ARGS__)
 
-static volatile uint64_t g_system_ticks = 0;
+static volatile u64 g_system_ticks = 0;
 
 void timer_handler(void) {
     g_system_ticks++;
@@ -16,16 +16,16 @@ void timer_handler(void) {
 }
 
 void timer_init(void) {
-    uint32_t frequency = 100; // 100 Hz
-    uint16_t divisor = TIMER_FREQUENCY / frequency;
+    u32 frequency = 100; // 100 Hz
+    u16 divisor = TIMER_FREQUENCY / frequency;
 
     outb(0x43, 0x36);
 
-    outb(0x40, (uint8_t)divisor & 0xFF);
-    outb(0x40, (uint8_t)(divisor >> 8) & 0xFF);
+    outb(0x40, (u8)divisor & 0xFF);
+    outb(0x40, (u8)(divisor >> 8) & 0xFF);
 
     interrupt_register_irq_handler(TIMER_IRQ, (irq_c_handler_t)timer_handler);
     pit_info("initialized with %u Hz frequency\n", frequency);
 }
 
-uint64_t timer_get_uptime_ms(void) { return g_system_ticks * 10; }
+u64 timer_get_uptime_ms(void) { return g_system_ticks * 10; }

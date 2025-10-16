@@ -1,8 +1,8 @@
 #ifndef NUCLEUS_CONSOLE_H
 #define NUCLEUS_CONSOLE_H
 
-#include <lib/stddef.h>
-#include <lib/stdint.h>
+#include <nucleus/stddef.h>
+#include <nucleus/types.h>
 
 /**
  * This is the main public header for Nucleus's console.
@@ -68,7 +68,7 @@ void console_writestring(const char *str);
 /**
  * @brief Sets the active foreground color.
  */
-void console_set_fg_color(uint32_t color);
+void console_set_fg_color(u32 color);
 
 /**
  * @brief Resets the foreground color to the default.

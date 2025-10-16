@@ -1,19 +1,19 @@
 #ifndef KERNEL_IO_H
 #define KERNEL_IO_H
 
-#include <lib/stdint.h>
+#include <nucleus/types.h>
 
 /**
  * @brief Writes a byte to the specified I/O port.
  * (This is a declaration; implementation is arch-specific)
  */
-static inline void outb(uint16_t port, uint8_t value);
+static inline void outb(u16 port, u8 value);
 
 /**
  * @brief Reads a byte from the specified I/O port.
  * (This is a declaration; implementation is arch-specific)
  */
-static uint8_t inb(uint16_t port);
+static u8 inb(u16 port);
 
 /**
  * @brief A short I/O delay.

@@ -1,15 +1,15 @@
 #include <drivers/video/gfx.h>
 #include <limine.h>
-#include <lib/stddef.h>
+#include <nucleus/stddef.h>
+#include <nucleus/types.h>
 
-static void limine_fb_put_pixel(gfx_device_t *dev, uint64_t x, uint64_t y,
-                                uint32_t color) {
+static void limine_fb_put_pixel(gfx_device_t *dev, u64 x, u64 y, u32 color) {
     if (!dev || !dev->address || x >= dev->width_px || y >= dev->height_px) {
         return;
     }
 
     if (dev->bpp == 32) {
-        volatile uint32_t *fb_ptr = (uint32_t *)dev->address;
+        volatile u32 *fb_ptr = (u32 *)dev->address;
         fb_ptr[y * (dev->pitch / 4) + x] = color;
     }
 
@@ -17,12 +17,12 @@ static void limine_fb_put_pixel(gfx_device_t *dev, uint64_t x, uint64_t y,
     // limine_framebuffer if needed
 }
 
-static void limine_fb_clear_screen(gfx_device_t *dev, uint32_t color) {
+static void limine_fb_clear_screen(gfx_device_t *dev, u32 color) {
     if (!dev || !dev->address) {
         return;
     }
-    for (uint64_t y = 0; y < dev->height_px; y++) {
-        for (uint64_t x = 0; x < dev->width_px; x++) {
+    for (u64 y = 0; y < dev->height_px; y++) {
+        for (u64 x = 0; x < dev->width_px; x++) {
             limine_fb_put_pixel(dev, x, y, color); // Use the device's put_pixel
         }
     }

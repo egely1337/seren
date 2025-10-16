@@ -47,16 +47,16 @@ void pic_remap_and_init(void) {
             PIC_IRQ_OFFSET_SLAVE, PIC_IRQ_OFFSET_SLAVE + 7);
 }
 
-void pic_send_eoi(uint8_t irq_number) {
+void pic_send_eoi(u8 irq_number) {
     if (irq_number >= 8 && irq_number <= 15) {
         outb(PIC2_COMMAND_PORT, PIC_EOI);
     }
     outb(PIC1_COMMAND_PORT, PIC_EOI);
 }
 
-void pic_mask_irq(uint8_t irq_line) {
-    uint16_t port;
-    uint8_t value;
+void pic_mask_irq(u8 irq_line) {
+    u16 port;
+    u8 value;
 
     if (irq_line < 8) {
         port = PIC1_DATA_PORT;
@@ -70,9 +70,9 @@ void pic_mask_irq(uint8_t irq_line) {
     outb(port, value);
 }
 
-void pic_unmask_irq(uint8_t irq_line) {
-    uint16_t port;
-    uint8_t value;
+void pic_unmask_irq(u8 irq_line) {
+    u16 port;
+    u8 value;
 
     if (irq_line < 8) {
         port = PIC1_DATA_PORT;
@@ -86,12 +86,12 @@ void pic_unmask_irq(uint8_t irq_line) {
     outb(port, value);
 }
 
-uint8_t pic_read_master_isr(void) {
+u8 pic_read_master_isr(void) {
     outb(PIC1_COMMAND_PORT, PIC_OCW3_READ_ISR);
     return inb(PIC1_COMMAND_PORT);
 }
 
-uint8_t pic_read_slave_isr(void) {
+u8 pic_read_slave_isr(void) {
     outb(PIC2_COMMAND_PORT, PIC_OCW3_READ_ISR);
     return inb(PIC2_COMMAND_PORT);
 }

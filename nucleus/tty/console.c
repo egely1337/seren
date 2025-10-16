@@ -19,11 +19,11 @@ static kernel_font_t active_font;
 
 static int cursor_x = 0;
 static int cursor_y = 0;
-static uint32_t current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
-static uint32_t current_bg_color = CONSOLE_DEFAULT_BG_COLOR;
+static u32 current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
+static u32 current_bg_color = CONSOLE_DEFAULT_BG_COLOR;
 
-static uint32_t screen_cols = 0;
-static uint32_t screen_rows = 0;
+static u32 screen_cols = 0;
+static u32 screen_rows = 0;
 
 static unsigned int inter_char_spacing = 1;
 static unsigned int effective_char_cell_width = 0;
@@ -31,7 +31,7 @@ static unsigned int effective_char_cell_width = 0;
 static int console_initialized_flag = 0;
 
 static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
-                                 uint32_t fg, uint32_t bg) {
+                                 u32 fg, u32 bg) {
     if (!console_initialized_flag || !active_gfx_device.address ||
         !active_font.get_glyph) {
         return;
@@ -170,7 +170,7 @@ void console_scroll(void) {
     void *last_line_start =
         (void *)((uintptr_t)active_gfx_device.address + scroll_size_bytes);
 
-    uint32_t *last_line_pixels = (uint32_t *)last_line_start;
+    u32 *last_line_pixels = (u32 *)last_line_start;
     size_t pixels_in_line = line_size_bytes / 4;
 
     for (size_t i = 0; i < pixels_in_line; i++) {
@@ -178,7 +178,7 @@ void console_scroll(void) {
     }
 }
 
-void console_putchar_colored(char c, uint32_t fg_color, uint32_t bg_color) {
+void console_putchar_colored(char c, u32 fg_color, u32 bg_color) {
     if (!console_initialized_flag) {
         return;
     }
@@ -247,7 +247,7 @@ void console_writestring(const char *str) {
     }
 }
 
-void console_set_fg_color(uint32_t color) { current_fg_color = color; }
+void console_set_fg_color(u32 color) { current_fg_color = color; }
 
 void console_reset_fg_color(void) {
     current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
@@ -257,9 +257,9 @@ void console_log(int level, const char *message) {
     if (!console_initialized_flag)
         return;
 
-    uint64_t uptime_ms = timer_get_uptime_ms();
-    uint64_t seconds = uptime_ms / 1000;
-    uint64_t milliseconds = uptime_ms % 1000;
+    u64 uptime_ms = timer_get_uptime_ms();
+    u64 seconds = uptime_ms / 1000;
+    u64 milliseconds = uptime_ms % 1000;
 
     char time_buf[16];
 
@@ -270,7 +270,7 @@ void console_log(int level, const char *message) {
     console_writestring(time_buf);
 
     const char *prefix_text = NULL;
-    uint32_t prefix_color = CONSOLE_DEFAULT_FG_COLOR;
+    u32 prefix_color = CONSOLE_DEFAULT_FG_COLOR;
 
     switch (level) {
     case 0:

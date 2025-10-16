@@ -2,9 +2,9 @@
 #define NUCLEUS_MEM_PMM_H
 
 #include <limine.h>
-#include <lib/stddef.h>
+#include <nucleus/stddef.h>
 
-#define PAGE_SIZE 0x1000
+#define PAGE_SIZE  0x1000
 #define PAGE_SHIFT 12
 
 /**
@@ -24,10 +24,10 @@ void pmm_init(volatile struct limine_memmap_request *memmap_request);
  *
  * Finds a free page frame, marks it as used, and returns its physical address.
  *
- * @return Physical address of the allocated page frame, or 0 (NULL equivalent for physical addresses)
- * if no free page frame is available.
+ * @return Physical address of the allocated page frame, or 0 (NULL equivalent
+ * for physical addresses) if no free page frame is available.
  */
-void* pmm_alloc_page(void);
+void *pmm_alloc_page(void);
 
 /**
  * @brief Allocates multiple contiguous physical page frames.
@@ -36,7 +36,7 @@ void* pmm_alloc_page(void);
  * @return Physical address of the first allocated page frame, or 0 if
  * not enough contiguous pages are available.
  */
-void* pmm_alloc_contiguous_pages(size_t num_pages);
+void *pmm_alloc_contiguous_pages(size_t num_pages);
 
 /**
  * @brief Frees a previously allocated physical page frame.
@@ -50,7 +50,8 @@ void pmm_free_page(void *p_addr);
 /**
  * @brief Frees multiple contiguous physical page frames.
  *
- * @param p_addr Physical address of the first page frame in the contiguous block.
+ * @param p_addr Physical address of the first page frame in the contiguous
+ * block.
  * @param num_pages The number of contiguous pages to free.
  */
 void pmm_free_contiguous_pages(void *p_addr, size_t num_pages);
@@ -59,18 +60,18 @@ void pmm_free_contiguous_pages(void *p_addr, size_t num_pages);
  * @brief Gets the total amount of usable physical memory.
  * @return Total usable memory in bytes.
  */
-uint64_t pmm_get_total_memory(void);
+u64 pmm_get_total_memory(void);
 
 /**
  * @brief Gets the amount of free physical memory.
  * @return Free memory in bytes.
  */
-uint64_t pmm_get_free_memory(void);
+u64 pmm_get_free_memory(void);
 
 /**
  * @brief Gets the amount of used physical memory.
  * @return Used memory in bytes.
  */
-uint64_t pmm_get_used_memory(void);
+u64 pmm_get_used_memory(void);
 
 #endif // NUCLEUS_MEM_PMM_H

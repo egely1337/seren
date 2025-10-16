@@ -5,8 +5,8 @@
 void interrupts_enable(void) { __asm__ volatile("sti"); }
 void interrupts_disable(void) { __asm__ volatile("cli"); }
 
-uint64_t interrupt_save_and_disable(void) {
-    uint64_t flags;
+u64 interrupt_save_and_disable(void) {
+    u64 flags;
     __asm__ volatile("pushfq \n\t"
                      "pop %0 \n\t"
                      "cli"
@@ -16,7 +16,7 @@ uint64_t interrupt_save_and_disable(void) {
     return flags;
 }
 
-void interrupt_restore(uint64_t flags) {
+void interrupt_restore(u64 flags) {
     __asm__ volatile("push %0 \n\t"
                      "popfq"
                      :
@@ -24,4 +24,4 @@ void interrupt_restore(uint64_t flags) {
                      : "memory");
 }
 
-void irq_unmask(uint8_t irq_line) { pic_unmask_irq(irq_line); }
+void irq_unmask(u8 irq_line) { pic_unmask_irq(irq_line); }

@@ -4,8 +4,8 @@
 #include <nucleus/interrupt.h>
 #include <nucleus/types.h>
 
-#define TIMER_IRQ       (uint8_t)0
-#define TIMER_FREQUENCY (uint32_t)1193182
+#define TIMER_IRQ       (u8)0
+#define TIMER_FREQUENCY (u32)1193182
 
 /**
  * @brief Every millisecond cpu will fire this function.
@@ -20,6 +20,6 @@ void timer_init(void);
 /**
  * @brief Gets the number of milliseconds since the timer was initialized.
  */
-uint64_t timer_get_uptime_ms(void);
+u64 timer_get_uptime_ms(void);
 
 #endif
