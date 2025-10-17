@@ -33,7 +33,6 @@ void kmain(void) {
     arch_init();
 
     mem_init(&memmap_request);
-
     kheap_init(NULL, 0);
 
     keyboard_init();
