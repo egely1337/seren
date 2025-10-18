@@ -8,6 +8,8 @@ else
 	$(error Unsupported architecture: $(ARCH))
 endif
 
+
+
 # --- Toolchain Configuration ---
 TARGET_TRIPLET ?= $(ARCH)-elf
 CC = $(TARGET_TRIPLET)-gcc
@@ -15,6 +17,8 @@ AS = nasm
 LD = $(TARGET_TRIPLET)-ld
 OBJCOPY = $(TARGET_TRIPLET)-objcopy
 QEMU = qemu-system-$(ARCH)
+
+
 
 # --- Directory Structure ---
 
@@ -94,6 +98,16 @@ INCLUDES_ARCH = -I$(INCLUDE_ARCH_INTERNAL_DIR)
 ifeq ($(ARCH), x86_64)
 	ASFLAGS_ARCH = -f elf64
 	CFLAGS_ARCH = -DARCH_X86_64
+
+	# --- Check Linux ---
+	ifeq ($(shell uname), Linux)
+		TARGET_TRIPLET ?= $(ARCH)-elf
+		CC = gcc
+		AS = nasm
+		LD = ld
+		OBJCOPY = objcopy
+		QEMU = qemu-system-$(ARCH)
+	endif
 else
     $(error Unsupported architecture: $(ARCH))
 endif

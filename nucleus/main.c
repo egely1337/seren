@@ -10,6 +10,7 @@
 #include <nucleus/sched/sched.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/types.h>
+#include <lib/string.h>
 #include <pic.h>
 
 __attribute__((

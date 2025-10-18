@@ -82,6 +82,7 @@ int strncmp(const char *s1, const char *s2, size_t n) {
     return *(const unsigned char *)s1 - *(const unsigned char *)s2;
 }
 
+extern void memcpy_sse(void *src, void *dest, size_t n);
 void *memcpy(void *dest_ptr, const void *src_ptr, size_t n) {
     unsigned char *dest = (unsigned char *)dest_ptr;
     const unsigned char *src = (const unsigned char *)src_ptr;
