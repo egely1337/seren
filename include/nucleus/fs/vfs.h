@@ -13,9 +13,9 @@ typedef void (*touch_op)(const char*, struct device*, const void*);
 typedef void (*mount_op)(struct device*);
 typedef void (*probe_op)(struct device*);
 
-struct vfs {
+struct filesystem {
     char* name;
-    union
+    struct
     {    
         read_op read;
         close_op close;
@@ -28,8 +28,8 @@ struct vfs {
 
 struct mount_info {
     char* mount_point;
-    struct device* dev;
-    struct list_head head;
+    struct filesystem* fs;
+    struct list_head mount_list;
 };
 
 /**

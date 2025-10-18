@@ -18,7 +18,6 @@ _start:
     ;   - Limine has also kindly provided a higher-half direct map of physical memory.
 
     mov rsp, stack_top
-
     call kmain
 
     ; Ideally, kmain never returns. BUT if something unexpected happens
