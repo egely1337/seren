@@ -29,7 +29,6 @@ struct filesystem {
 struct mount_info {
     char* mount_point;
     struct filesystem* fs;
-    struct list_head mount_list;
 };
 
 /**
@@ -46,5 +45,10 @@ void vfs_read(const char* path, void* buf);
  * @brief Write to virtual filesystem
  */
 void vfs_write(const char* path, void* buf, size_t n);
+
+/**
+ * @brief Mounts root
+ */
+void vfs_mount_root(struct filesystem* rootfs);
 
 #endif
