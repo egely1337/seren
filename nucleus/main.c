@@ -7,6 +7,7 @@
 #include <nucleus/mm/pmm.h>
 #include <nucleus/mm/slab.h>
 #include <nucleus/printk.h>
+#include <nucleus/fs/vfs.h>
 #include <nucleus/sched/sched.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/types.h>
@@ -35,6 +36,8 @@ void kmain(void) {
 
     mem_init(&memmap_request);
     kheap_init(NULL, 0);
+
+    vfs_init();
 
     keyboard_init();
     pr_info("Keyboard driver initialized.\n");
