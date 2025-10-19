@@ -47,6 +47,21 @@ static void do_initcalls(void) {
 	}
 }
 
+void task1() {
+	int tick = 0;
+	while (1) {
+		tick++;
+		pr_notice("TASK 1 - %d\n", tick);
+	}
+}
+void task2() {
+	int tick = 0;
+	while (1) {
+		tick++;
+		pr_err("TASK 2 - %d\n", tick);
+	}
+}
+
 void kmain(void) {
 	console_init();
 
@@ -65,8 +80,10 @@ void kmain(void) {
 	pr_notice("This is the test build!\n");
 #endif
 
-	while (1) {
-		char c = keyboard_getchar();
-		printk("%c", c);
+	create_task("task1", task1);
+	create_task("task2", task2);
+
+	for (;;) {
+		__asm__ volatile("hlt");
 	}
 }
