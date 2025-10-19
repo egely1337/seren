@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef _NUCLEUS_PRINTK_H
 #define _NUCLEUS_PRINTK_H
 

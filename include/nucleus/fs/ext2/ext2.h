@@ -1,21 +1,23 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef _EXT2_H
 #define _EXT2_H
 #include <nucleus/types.h>
 
 #define EXT2_SIGNATURE 0xEF53
 
-#define SECTOR_SIZE 512 
-#define BLOCK_SIZE 1024
+#define SECTOR_SIZE 512
+#define BLOCK_SIZE  1024
 
 struct device;
 typedef enum {
-    INODE_TYPE_FIFO = 0x1000,
-    INODE_TYPE_CHAR_DEV = 0x2000,
-    INODE_TYPE_DIRECTORY = 0x4000,
-    INODE_TYPE_BLOCK_DEV = 0x6000,
-    INODE_TYPE_FILE = 0x8000,
-    INODE_TYPE_SYMLINK = 0xA000,
-    INODE_TYPE_SOCKET = 0xC000
+	INODE_TYPE_FIFO = 0x1000,
+	INODE_TYPE_CHAR_DEV = 0x2000,
+	INODE_TYPE_DIRECTORY = 0x4000,
+	INODE_TYPE_BLOCK_DEV = 0x6000,
+	INODE_TYPE_FILE = 0x8000,
+	INODE_TYPE_SYMLINK = 0xA000,
+	INODE_TYPE_SOCKET = 0xC000
 } inode_type;
 
 struct ext2_sb {
@@ -25,7 +27,7 @@ struct ext2_sb {
 	u32 unallocatedblocks;
 	u32 unallocatedinodes;
 	u32 superblock_id;
-	u32 blocksize_hint; // shift by 1024 to the left
+	u32 blocksize_hint;    // shift by 1024 to the left
 	u32 fragmentsize_hint; // shift by 1024 to left
 	u32 blocks_in_blockgroup;
 	u32 frags_in_blockgroup;
@@ -100,11 +102,11 @@ struct ext2_priv_data {
 /**
  * @brief Returns a filesystem object to mount.
  */
-struct filesystem *ext2_init(struct device* dev);
+struct filesystem *ext2_init(struct device *dev);
 
 /**
  * @brief Read files.
  */
-void ext2_read(char* fn, const void *buf);
+void ext2_read(char *fn, const void *buf);
 
 #endif

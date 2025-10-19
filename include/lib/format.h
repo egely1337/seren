@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef FORMAT_H
 #define FORMAT_H
 
@@ -21,7 +23,7 @@
  * @return A pointer to the resulting null-terminated string (same as str).
  */
 char *itoa_k(long long value, char *str, int base, int is_signed, int min_width,
-             char pad_char);
+	     char pad_char);
 
 /**
  * @brief Kernel-level vsnprintf: formats a string into a buffer.

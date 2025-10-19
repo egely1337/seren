@@ -1,0 +1,1 @@
+obj-bin-y += font.o

@@ -1,227 +1,110 @@
-# --- Architecture Configuration ---
-ARCH ?= x86_64
-ARCH_TRIPLET ?= x86-64
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (C) 2025 Arda Yetistiren
+#
+# Usage: make [target] [OPTION=value]
+#
+# Common Targets:
+#   all		Build the final bootable OS image. (default)
+#   clean	Remove all generated build artifacts and downloaded dependencies.
+#   help	Display this help message.
+#   iso		Force a rebuild of the ISO image.
+#
+# Common Options:
+#   V=1		Enable verbose output to see full compiler commands.
+#   ARCH=...	Specify the target architecture (e.g., x86_64).
+#   CROSS_COMPILE=... Specify the toolchain prefix (e.g., x86_64-elf-).
 
-ifeq ($(ARCH), x86_64)
-	ARCH_TRIPLET = x86-64
+ifeq ($(V),1)
+	Q =
 else
-	$(error Unsupported architecture: $(ARCH))
+	Q = @
 endif
 
+export Q
 
+TOPDIR := $(shell pwd)
 
-# --- Toolchain Configuration ---
-TARGET_TRIPLET ?= $(ARCH)-elf
-CC = $(TARGET_TRIPLET)-gcc
-AS = nasm
-LD = $(TARGET_TRIPLET)-ld
-OBJCOPY = $(TARGET_TRIPLET)-objcopy
-QEMU = qemu-system-$(ARCH)
+export TOPDIR
 
-
-
-# --- Directory Structure ---
-
-ROOT_DIR = .
-BUILD_DIR = $(ROOT_DIR)/build
-OBJ_DIR_BASE = $(BUILD_DIR)/obj
-OBJ_DIR = $(OBJ_DIR_BASE)/$(ARCH)
-DIST_DIR = $(BUILD_DIR)/dist
-ISO_ROOT_DIR = $(DIST_DIR)/iso_root
-
-# Source directories
-ARCH_SRC_DIR = $(ROOT_DIR)/arch/$(ARCH)
-KERNEL_SRC_DIR = $(ROOT_DIR)/nucleus
-DRIVERS_SRC_DIR = $(ROOT_DIR)/drivers
-LIB_SRC_DIR = $(ROOT_DIR)/lib
-
-# Include directories
-INCLUDE_MAIN_DIR = include
-INCLUDE_ARCH_INTERNAL_DIR = $(ARCH_SRC_DIR)/include
-INCLUDE_KERNEL_API_DIR = $(INCLUDE_MAIN_DIR)/kernel
-INCLUDE_DRIVERS_API_DIR = $(INCLUDE_MAIN_DIR)/drivers
-INCLUDE_LIB_API_DIR = $(INCLUDE_MAIN_DIR)/lib
-
-LIMINE_FILES_DIR = $(ROOT_DIR)/limine_files
-
-# Source file discovery
-
-find_files = $(shell find $(1) -name "$(2)" -print)
-
-ASM_FILES = $(call find_files,$(ARCH_SRC_DIR),*.s) \
-			$(call find_files,$(ARCH_SRC_DIR),*.S)
-
-C_FILES_ARCH = $(call find_files,$(ARCH_SRC_DIR),*.c)
-C_FILES_KERNEL = $(call find_files,$(KERNEL_SRC_DIR),*.c)
-C_FILES_DRIVERS = $(call find_files,$(DRIVERS_SRC_DIR),*.c)
-C_FILES_LIB = $(call find_files,$(LIB_SRC_DIR),*.c)
-
-C_SOURCES = $(C_FILES_ARCH) $(C_FILES_KERNEL) $(C_FILES_DRIVERS) $(C_FILES_LIB)
-
-# --- Object Files ---
-
-src_to_obj = $(addprefix $(OBJ_DIR)/, $(patsubst ./%,%,$(1)))
-obj_to_src = $(patsubst $(OBJ_DIR)/%,./%,$(1))
-
-ASM_OBJECTS = $(patsubst %.s,%.o,$(call src_to_obj, $(filter %.s,$(ASM_FILES)))) \
-              $(patsubst %.S,%.o,$(call src_to_obj, $(filter %.S,$(ASM_FILES))))
-C_OBJECTS   = $(patsubst %.c,%.o,$(call src_to_obj, $(C_SOURCES)))
-
-FONT_PSF_SRC = $(ROOT_DIR)/resources/font.psf
-FONT_PSF_OBJ = $(OBJ_DIR)/resources/font.o
-
-OBJECTS     = $(sort $(ASM_OBJECTS) $(C_OBJECTS) $(FONT_PSF_OBJ))
-DEPS        = $(C_OBJECTS:.o=.d)
-
-# --- Output Files ---
-
-KERNEL_ELF = $(BUILD_DIR)/nucleus-$(ARCH).elf
-OS_ISO = $(DIST_DIR)/seren-$(ARCH).iso
-
-# --- Compiler and Linker Flags
-
-INCLUDES_BASE = -I$(INCLUDE_MAIN_DIR)
-
-CFLAGS_COMMON = -std=c11 -Wall -Wextra -Werror -O2 -g \
-		 -ffreestanding -fno-stack-protector -fno-pie \
-		 -mno-red-zone -mcmodel=kernel -mgeneral-regs-only \
-		 -MMD -MP \
-		 -nostdinc -D__KERNEL__
-
-ASFLAGS_COMMON = -g
-LDFLAGS_COMMON = -T $(ROOT_DIR)/linker-$(ARCH).ld -nostdlib -static -no-pie \
-				 --no-dynamic-linker -z max-page-size=0x1000
-
-# --- Architecture Specific Settings ---
-INCLUDES_ARCH = -I$(INCLUDE_ARCH_INTERNAL_DIR)
-
-ifeq ($(ARCH), x86_64)
-	ASFLAGS_ARCH = -f elf64
-	CFLAGS_ARCH = -DARCH_X86_64
-
-	# --- Check Linux ---
-	ifeq ($(shell uname), Linux)
-		TARGET_TRIPLET ?= $(ARCH)-elf
-		CC = gcc
-		AS = nasm
-		LD = ld
-		OBJCOPY = objcopy
-		QEMU = qemu-system-$(ARCH)
-	endif
-else
-    $(error Unsupported architecture: $(ARCH))
+ifeq ("$(origin O)", "command line")
+	SBUILD_OUTPUT := $(O)
 endif
 
-# Final flags
-CFLAGS = $(CFLAGS_COMMON) $(INCLUDES_BASE) $(INCLUDES_ARCH) $(CFLAGS_ARCH)
-ASFLAGS = $(ASFLAGS_COMMON) $(ASFLAGS_ARCH)
-LDFLAGS = $(LDFLAGS_COMMON) $(LDFLAGS_ARCH)
+SBUILD_OUTPUT ?= $(TOPDIR)/build
+export SBUILD_OUTPUT
 
-# --- Limine Files ---
-LIMINE_BIOS_SYS_SRC ?= $(LIMINE_FILES_DIR)/limine-bios.sys
-LIMINE_BIOS_CD_SRC ?= $(LIMINE_FILES_DIR)/limine-bios-cd.bin
-ESSENTIAL_LIMINE_FILES = \
-	$(LIMINE_BIOS_SYS_SRC) \
-	$(LIMINE_BIOS_CD_SRC)
+include config.mk
 
-# --- Build Rules ---
-.PHONY: all clean iso run qemu_debug directories fetch-limine check-limine-files
+LIMINE_DIR	:= limine
+KERNEL_ELF	:= $(SBUILD_OUTPUT)/$(KERNEL_NAME).elf
+BUILT_IN_O	:= $(SBUILD_OUTPUT)/built-in.o
+OS_ISO		:= $(SBUILD_OUTPUT)/seren-$(ARCH).iso
+ISO_ROOT	:= $(SBUILD_OUTPUT)/iso_root
+LIMINE_STAMP := $(LIMINE_DIR)/.fetched
 
-all: $(KERNEL_ELF)
-	echo $(OBJECTS)
+ARCH_MAKEFILE	:= $(TOPDIR)/arch/$(SRCARCH)/Makefile
 
-directories:
-	@echo "Creating directories for $(ARCH)..."
-	@mkdir -p $(OBJ_DIR) $(BUILD_DIR) $(DIST_DIR) $(ISO_ROOT_DIR)
-	@$(foreach dir, $(sort $(dir $(OBJECTS))), mkdir -p $(dir);)
+-include $(ARCH_MAKEFILE)
 
-$(FONT_PSF_OBJ): $(FONT_PSF_SRC) | directories
-	@echo "OBJCOPY [$(ARCH)] $< -> $@"
-	@mkdir -p $(dir $@)
-	$(OBJCOPY) -I binary -O elf64-$(ARCH_TRIPLET) $< $@
+export ELF_TARGET_FORMAT
 
-$(KERNEL_ELF): $(OBJECTS) $(ROOT_DIR)/linker-$(ARCH).ld | directories
-	echo "LD   [$(ARCH)] $@"
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS)
+# ---[ Core Build Targets ]--- 
 
-$(OBJ_DIR)/%.o: ./%.c Makefile | directories
-	@echo "CC   [$(ARCH)] $<"
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+.PHONY: all clean
 
-$(OBJ_DIR)/%.o: ./%.s Makefile | directories
-	@echo "AS   [$(ARCH)] $<"
-	@mkdir -p $(dir $@)
-	$(AS) $(ASFLAGS) $< -o $@
+all: $(OS_ISO) ## Build the final bootable OS image. (default)
 
-$(OBJ_DIR)/%.o: ./%.S Makefile | directories
-	@echo "AS   [$(ARCH)] $<"
-	@mkdir -p $(dir $@)
-	$(AS) $(ASFLAGS) $< -o $@
+$(BUILT_IN_O):
+	@echo "DESCEND into build..."
+	$(Q)$(MAKE) -f $(TOPDIR)/scripts/build.mk -C .
 
-clean:
-	@echo "CLEAN"
-	rm -rf $(BUILD_DIR)/obj/$(ARCH) $(BUILD_DIR)/nucleus-$(ARCH).elf $(DIST_DIR)
+$(KERNEL_ELF): $(BUILT_IN_O) $(TOPDIR)/arch/$(SRCARCH)/linker.ld
+	@echo "  LD		$@"
+	$(Q)$(LD) $(LDFLAGS) -o $@ $< 
 
-iso: $(KERNEL_ELF) $(ROOT_DIR)/limine.conf check-limine-files | directories
-	@echo "--> Preparing files for ISO image [$(ARCH)]..."
-	cp $(KERNEL_ELF) $(ISO_ROOT_DIR)/nucleus.elf
-	cp $(ROOT_DIR)/limine.conf $(ISO_ROOT_DIR)/limine.conf
+clean: ## Remove all generated build artifacts and downloaded dependencies.
+	@echo "  CLEAN		$(SBUILD_OUTPUT) and $(LIMINE_DIR)"
+	$(Q)rm -rf $(SBUILD_OUTPUT) $(LIMINE_DIR)
 
-	@echo "--> Copying Limine BIOS files..."
-	cp $(LIMINE_BIOS_SYS_SRC) $(ISO_ROOT_DIR)
-	cp $(LIMINE_BIOS_CD_SRC) $(ISO_ROOT_DIR)
+.PHONY: run iso fetch-limine help
 
-	@echo "--> Creating ISO image: $(OS_ISO)..."
+iso: $(OS_ISO) ## Force a rebuild of the ISO image.
 
-	xorriso -as mkisofs \
-		-b limine-bios-cd.bin \
-		--no-emul-boot -boot-load-size 4 -boot-info-table \
-		$(ISO_ROOT_DIR) -o $(OS_ISO)
-	
-	@echo "--> ISO image created successfully: $(OS_ISO)"
+$(OS_ISO): $(KERNEL_ELF) $(LIMINE_STAMP)
+	@echo "  ISO		$@"
+	$(Q)rm -rf $(ISO_ROOT)
+	$(Q)mkdir -p $(ISO_ROOT)
+	$(Q)cp $(KERNEL_ELF) $(ISO_FILES) $(ISO_ROOT)/
+	$(Q)xorriso -as mkisofs \
+		-b limine-bios-cd.bin -no-emul-boot \
+		-boot-load-size 4 -boot-info-table \
+		-quiet \
+		$(ISO_ROOT) -o $@
 
-# --- QEMU Execution ---
-QEMU_FLAGS_COMMON = -m 256M
+run: $(OS_ISO) ## Build and run the OS in QEMU.
+	@echo "  RUN		Booting with QEMU..."
+	$(Q)$(QEMU) $(QEMU_FLAGS) -cdrom $<
 
-QEMU_FLAGS = $($(QEMU_FLAGS_$(ARCH))) $(QEMU_FLAGS_COMMON)
+$(LIMINE_STAMP):
+	$(Q)$(MAKE) fetch-limine
 
-run: iso
-	$(QEMU) $(QEMU_FLAGS) -cdrom $(OS_ISO)
-
-qemu_debug: iso
-	$(QEMU) $(QEMU_FLAGS) -cdrom $(OS_ISO) -s -S
-
-# --- Limine Fetcing ---
 fetch-limine:
-	@if [ ! -d "$(LIMINE_FILES_DIR)" ]; then mkdir -p $(LIMINE_FILES_DIR); fi
-	@sh tools/fetch_limine.sh
+	@echo "  GIT		Fetching Limine bootloader"
+	$(Q)git clone https://github.com/limine-bootloader/limine.git --branch=v10.x-binary --depth=1 $(LIMINE_DIR)
+	$(Q)touch $(LIMINE_STAMP)
 
-check-limine-files:
-	@missing_files=0; \
-	for file in $(ESSENTIAL_LIMINE_FILES); do \
-		if [ ! -f "$$file" ]; then \
-			echo "ERROR: Limine file '$$file' is missing."; \
-			missing_files=1; \
-		fi; \
-	done; \
-	if [ "$$missing_files" -ne 0 ]; then \
-	    echo "--> Some Limine files are missing. Attempting to fetch them..."; \
-	    $(MAKE) fetch-limine; \
-	    missing_files_after_fetch=0; \
-	    for file_after_fetch in $(ESSENTIAL_LIMINE_FILES); do \
-	        if [ ! -f "$$file_after_fetch" ]; then \
-	            echo "ERROR: Limine file '$$file_after_fetch' is still missing after fetch attempt."; \
-	            missing_files_after_fetch=1; \
-	        fi; \
-	    done; \
-	    if [ "$$missing_files_after_fetch" -ne 0 ]; then \
-	        echo "Please ensure 'tools/fetch_limine.sh' ran successfully or place the files manually in '$(LIMINE_FILES_DIR)'."; \
-	        exit 1; \
-	    fi; \
-	    echo "--> Limine files successfully fetched."; \
-	else \
-	    echo "--> All essential Limine files found."; \
-	fi
 
--include $(DEPS)
+help: ## Display this help message.
+	@echo "SerenOS Kernel Build System"
+	@echo ""
+	@echo "Usage: make [target] [OPTION=value]"
+	@echo ""
+	@echo "Common Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | \
+		sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Common Options:"
+	@echo "  V=1           Enable verbose output to see full compiler commands."
+	@echo "  ARCH=...      Specify the target architecture (e.g., x86_64)."
+	@echo "  CROSS_COMPILE=... Specify the toolchain prefix (e.g., x86_64-elf-)."
+	@echo ""

@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef PIT_H
 #define PIT_H
 
 #include <nucleus/interrupt.h>
 #include <nucleus/types.h>
 
-#define TIMER_IRQ       (u8)0
+#define TIMER_IRQ	(u8)0
 #define TIMER_FREQUENCY (u32)1193182
 
 /**

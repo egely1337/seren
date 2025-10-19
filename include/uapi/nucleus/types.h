@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef _UAPI_NUCLEUS_TYPES_H
 #define _UAPI_NUCLEUS_TYPES_H
 

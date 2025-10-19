@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef _NUCLEUS_MM_SLAB_H
 #define _NUCLEUS_MM_SLAB_H
 
@@ -18,8 +20,8 @@ struct kmem_cache;
  * or NULL on failure.
  */
 struct kmem_cache *kmem_cache_create(const char *name, size_t size,
-                                     size_t align, void (*ctor)(void *),
-                                     void (*dtor)(void *));
+				     size_t align, void (*ctor)(void *),
+				     void (*dtor)(void *));
 
 /**
  * kmem_cache_destroy - Destroy a slab cache.

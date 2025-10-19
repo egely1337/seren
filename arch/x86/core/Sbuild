@@ -1,0 +1,7 @@
+obj-y += exception.o
+obj-y += gdt.o
+obj-y += gdt_flush.o
+obj-y += idt.o
+obj-y += init.o
+obj-y += interrupt_stubs.o
+obj-y += irq.o

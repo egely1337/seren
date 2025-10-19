@@ -14,61 +14,62 @@ Seren is all about learning how operating systems actually work. The Nucleus Ker
 
 - It boots! (Thanks, Limine!)
 - Got the basic higher-half kernel memory layout sorted.
-- The build system is doing its thing.
 
-## Building Seren
+## Building & Running Seren
 
 ### Prerequisites
 
 1. **A Cross-Compiler Toolchain (sounds scarier than it is):**
 
-   - `x86_64-elf-gcc`
-   - `nasm`
+      - `x86_64-elf-gcc`
+      - `x86_64-elf-as`
+      - `x86_64-elf-ld`
+      - `x86_64-elf-binutils`
 
 2. **QEMU:**
 
-   - `qemu-system-x86_64` lets us run the OS in a safe little sandbox.
+      - `qemu-system-x86_64` lets us run the OS in a safe little sandbox.
 
 3. **Limine Bootloader Files:**
 
-   - Good news! The Makefile has a script (`tools/fetch_limine.sh`) that'll try to download these for you.
+      - Good news! The Makefile has a script that'll try to download these for you.
 
 4. **The Usual Suspects:**
-   - `make`
-   - `xorriso`
-   - `bash`
+      - `make`
+      - `xorriso`
+      - `git`
+      - `bash`
 
-### Building Seren
+### Get Started
 
 ```bash
 git clone https://github.com/ardytstrn/seren.git
 cd seren
-make iso
-```
 
-This command will:
-
-- Compile the kernel source code.
-- Link it all up into `build/nucleus.elf`.
-- And finally, create a bootable `build/dist/seren.iso` image. Voila!
-
-### Running Seren
-
-```bash
+# Build and run the OS in QEMU
 make run
 ```
 
-This should boot up your `seren.iso` in QEMU.
+### Common `make` Commands
+
+| Command      | Description                                |
+| ------------ | ------------------------------------------ |
+| `make`       | Builds the final bootable OS image         |
+| `make run`   | Builds and immediately runs the OS in QEMU |
+| `make clean` | Removes all generated build artifacts      |
+| `make help`  | Displays a list of all available targets   |
 
 ### Debugging Seren
 
-1.  Start QEMU in "wait for GDB" mode:
+> This section will be updated later.
+
+1. Start QEMU in "wait for GDB" mode:
 
 ```bash
 make qemu_debug
 ```
 
-2.  In a new terminal window, get GDB going:
+2. In a new terminal window, get GDB going:
 
 ```bash
 (gdb) file build/nucleus.elf
@@ -91,4 +92,4 @@ Right now, this is mostly a "learn-as-I-go" project. But hey, feel free to look 
 
 ## Legal Stuff (The License)
 
-This project is licensed under MIT License - check out [LICENSE](LICENSE) file for the boring details.
+This project is licensed under Apache License 2.0 - check out [LICENSE](LICENSE) file for the boring details.

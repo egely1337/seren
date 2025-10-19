@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef NUCLEUS_CONSOLE_H
 #define NUCLEUS_CONSOLE_H
 
@@ -8,16 +10,16 @@
  * This is the main public header for Nucleus's console.
  */
 
-#define COLOR_BLACK         0x00000000
-#define COLOR_RED           0x00FF0000
-#define COLOR_GREEN         0x0000FF00
-#define COLOR_YELLOW        0x00FFFF00
+#define COLOR_BLACK	    0x00000000
+#define COLOR_RED	    0x00FF0000
+#define COLOR_GREEN	    0x0000FF00
+#define COLOR_YELLOW	    0x00FFFF00
 #define COLOR_BRIGHT_RED    0x00FF5555
 #define COLOR_BRIGHT_YELLOW 0x00FFFF55
 #define COLOR_BRIGHT_GREEN  0x0055FF55
 #define COLOR_BRIGHT_BLUE   0x005555FF
 #define COLOR_LIGHT_GREY    0x00D0D0D0
-#define COLOR_DARK_GREY     0x00808080
+#define COLOR_DARK_GREY	    0x00808080
 
 // Let's set up some default colors for our console.
 // The 0x00 at the start is for Alpha.

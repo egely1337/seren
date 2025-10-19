@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef _NUCLEUS_MM_PMM_H
 #define _NUCLEUS_MM_PMM_H
 
@@ -18,7 +20,7 @@
  * @pfn:    Page frame number
  */
 struct page {
-    u64 pfn;
+	u64 pfn;
 };
 
 /**
@@ -70,10 +72,10 @@ struct page *phys_to_page(phys_addr_t phys);
  * @addr:   The kernel virtual address (from the HHDM)
  */
 static inline struct page *virt_to_page(void *addr) {
-    extern volatile struct limine_hhdm_request hhdm_request;
-    u64 hhdm_offset = hhdm_request.response->offset;
-    phys_addr_t phys = (phys_addr_t)addr - hhdm_offset;
-    return phys_to_page(phys);
+	extern volatile struct limine_hhdm_request hhdm_request;
+	u64 hhdm_offset = hhdm_request.response->offset;
+	phys_addr_t phys = (phys_addr_t)addr - hhdm_offset;
+	return phys_to_page(phys);
 }
 
 /**
@@ -81,9 +83,9 @@ static inline struct page *virt_to_page(void *addr) {
  * @addr:   The page structure to convert
  */
 static inline void *page_to_virt(struct page *page) {
-    extern volatile struct limine_hhdm_request hhdm_request;
-    u64 hhdm_offset = hhdm_request.response->offset;
-    return (void *)(hhdm_offset + page_to_phys(page));
+	extern volatile struct limine_hhdm_request hhdm_request;
+	u64 hhdm_offset = hhdm_request.response->offset;
+	return (void *)(hhdm_offset + page_to_phys(page));
 }
 
 /**

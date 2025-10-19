@@ -1,11 +1,15 @@
-#include <nucleus/fs/ext2/ext2.h>
+// SPDX-License-Identifier: Apache-2.0
+/**
+ * Copyright (C) 2025 egely1337
+ */
+
 #include <nucleus/fs/devicefs.h>
+#include <nucleus/fs/ext2/ext2.h>
 
-
-struct ext2_sb* superblock = (void*)0;
+struct ext2_sb *superblock = (void *)0;
 bool __initialized = false;
 
-struct filesystem *ext2_init(struct device* dev) {
-   (void)dev;
-    return 0;
+struct filesystem *ext2_init(struct device *dev) {
+	(void)dev;
+	return 0;
 }

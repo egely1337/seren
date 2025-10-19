@@ -1,0 +1,5 @@
+obj-y += lib/
+obj-y += nucleus/
+obj-y += drivers/
+obj-y += arch/$(SRCARCH)/
+obj-y += resources/
