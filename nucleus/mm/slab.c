@@ -318,10 +318,10 @@ int kheap_init(void *initial_pool_start, size_t initial_pool_size) {
 
 void *kmalloc(size_t size) {
 	void *p;
-	if (size == 0)
+	if (unlikely(size == 0))
 		return NULL;
 
-	if (size > KMALLOC_MAX_SIZE) {
+	if (unlikely(size > KMALLOC_MAX_SIZE)) {
 		pr_err(
 		    "kmalloc: size %lu is greater than KMALLOC_MAX_SIZE %lu\n",
 		    size, KMALLOC_MAX_SIZE);
@@ -341,7 +341,7 @@ void *kmalloc(size_t size) {
 		struct page *pg = alloc_pages(order);
 		void *base;
 		struct page_alloc_hdr *hdr;
-		if (!pg)
+		if (unlikely(!pg))
 			return NULL;
 		base = page_to_virt(pg);
 		hdr = (struct page_alloc_hdr *)base;
@@ -364,7 +364,7 @@ void kfree(void *ptr) {
 	struct page *pg;
 	void *page_base;
 
-	if (!ptr)
+	if (unlikely(!ptr))
 		return;
 
 	hdr = (struct page_alloc_hdr *)((uintptr_t)ptr -
@@ -385,10 +385,10 @@ void kfree(void *ptr) {
 void *kcalloc(size_t n, size_t size) {
 	void *p;
 	size_t bytes;
-	if (n == 0 || size == 0)
+	if (unlikely(n == 0 || size == 0))
 		return NULL;
 	bytes = n * size;
-	if (bytes / size != n)
+	if (unlikely(bytes / size != n))
 		return NULL;
 	p = kmalloc(bytes);
 	if (p)

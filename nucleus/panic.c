@@ -12,7 +12,7 @@
 #include <nucleus/types.h>
 
 static void __print_registers(struct pt_regs *context) {
-	if (!context) {
+	if (unlikely(!context)) {
 		pr_crit("  Register context not available.\n");
 		return;
 	}

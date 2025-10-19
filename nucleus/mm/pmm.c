@@ -319,19 +319,19 @@ struct page *alloc_pages(u32 order) {
 	size_t count = 1UL << order;
 	s64 start_pfn;
 
-	if (!bitmap) {
+	if (unlikely(!bitmap)) {
 		pr_warn("allocator not initialized\n");
 		return NULL;
 	}
 
-	if (nr_free < count) {
+	if (unlikely(nr_free < count)) {
 		pr_warn("out of memory (need %lu pages, have %lu)\n", count,
 			nr_free);
 		return NULL;
 	}
 
 	start_pfn = __find_free_pages(count);
-	if (start_pfn < 0) {
+	if (unlikely(start_pfn < 0)) {
 		pr_warn("cannot find %lu contiguous pages\n", count);
 		return NULL;
 	}
@@ -347,18 +347,18 @@ void free_pages(struct page *page, u32 order) {
 	size_t count = 1UL << order;
 	u64 start_pfn;
 
-	if (!bitmap || !page)
+	if (unlikely(!bitmap || !page))
 		return;
 
 	start_pfn = page->pfn;
 
-	if (start_pfn >= max_pfn) {
+	if (unlikely(start_pfn >= max_pfn)) {
 		pr_warn("invalid page frame number 0x%lx\n", start_pfn);
 		return;
 	}
 
 	for (size_t i = 0; i < count; i++) {
-		if (!__test_bit(start_pfn + i)) {
+		if (unlikely(!__test_bit(start_pfn + i))) {
 			pr_warn("double free detected at PFN 0x%lx\n",
 				start_pfn + i);
 			return;

@@ -3,6 +3,7 @@
 #ifndef _NUCLEUS_TYPES_H
 #define _NUCLEUS_TYPES_H
 
+#include <nucleus/compiler.h>
 #include <uapi/nucleus/types.h>
 
 typedef unsigned char u8;

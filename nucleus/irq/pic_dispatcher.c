@@ -26,7 +26,9 @@ void do_irq(struct pt_regs *regs) {
 		return;
 	}
 
-	if (__irq_handlers[irq])
+	irq_handler_t handler = __irq_handlers[irq];
+
+	if (likely(handler))
 		__irq_handlers[irq](regs);
 	else
 		pr_warn("unhandled IRQ %u\n", irq);
@@ -35,7 +37,7 @@ void do_irq(struct pt_regs *regs) {
 int request_irq(u32 irq, irq_handler_t handler) {
 	unsigned long flags;
 
-	if (irq >= 16 || !handler) {
+	if (unlikely(irq >= 16 || !handler)) {
 		return -1;
 	}
 
@@ -57,7 +59,7 @@ int request_irq(u32 irq, irq_handler_t handler) {
 void free_irq(u32 irq) {
 	unsigned long flags;
 
-	if (irq >= 16)
+	if (unlikely(irq >= 16))
 		return;
 
 	disable_irq(irq);

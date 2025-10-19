@@ -9,8 +9,8 @@
 #include <nucleus/types.h>
 
 static void limine_fb_put_pixel(gfx_device_t *dev, u64 x, u64 y, u32 color) {
-	if (!dev || !dev->address || x >= dev->width_px ||
-	    y >= dev->height_px) {
+	if (unlikely(!dev || !dev->address || x >= dev->width_px ||
+		     y >= dev->height_px)) {
 		return;
 	}
 
@@ -24,7 +24,7 @@ static void limine_fb_put_pixel(gfx_device_t *dev, u64 x, u64 y, u32 color) {
 }
 
 static void limine_fb_clear_screen(gfx_device_t *dev, u32 color) {
-	if (!dev || !dev->address) {
+	if (unlikely(!dev || !dev->address)) {
 		return;
 	}
 	for (u64 y = 0; y < dev->height_px; y++) {
@@ -36,7 +36,7 @@ static void limine_fb_clear_screen(gfx_device_t *dev, u32 color) {
 }
 
 int gfx_init_from_limine_fb(gfx_device_t *dev, struct limine_framebuffer *fb) {
-	if (!dev || !fb || !fb->address) {
+	if (unlikely(!dev || !fb || !fb->address)) {
 		return -1;
 	}
 

@@ -38,15 +38,17 @@ static int console_initialized_flag = 0;
 
 static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
 				 u32 fg, u32 bg) {
-	if (!console_initialized_flag || !active_gfx_device.address ||
-	    !active_font.get_glyph) {
+	if (unlikely(!console_initialized_flag || !active_gfx_device.address ||
+		     !active_font.get_glyph)) {
 		return;
 	}
 
 	font_glyph_t glyph_info;
 
-	if (font_get_glyph(&active_font, (unsigned char)c, &glyph_info) != 0) {
-		if (font_get_glyph(&active_font, '?', &glyph_info) != 0) {
+	if (unlikely(font_get_glyph(&active_font, (unsigned char)c,
+				    &glyph_info) != 0)) {
+		if (unlikely(font_get_glyph(&active_font, '?', &glyph_info) !=
+			     0)) {
 			return;
 		}
 	}
@@ -94,23 +96,24 @@ static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
 }
 
 void console_init(void) {
-	if (console_initialized_flag) {
+	if (unlikely(console_initialized_flag)) {
 		return;
 	}
 
-	if (framebuffer_request.response == NULL ||
-	    framebuffer_request.response->framebuffer_count < 1) {
+	if (unlikely(framebuffer_request.response == NULL ||
+		     framebuffer_request.response->framebuffer_count < 1)) {
 		return;
 	}
 
 	struct limine_framebuffer *limine_fb =
 	    framebuffer_request.response->framebuffers[0];
 
-	if (!limine_fb || !limine_fb->address) {
+	if (unlikely(!limine_fb || !limine_fb->address)) {
 		return;
 	}
 
-	if (gfx_init_from_limine_fb(&active_gfx_device, limine_fb) != 0) {
+	if (unlikely(gfx_init_from_limine_fb(&active_gfx_device, limine_fb) !=
+		     0)) {
 		return;
 	}
 
@@ -124,7 +127,7 @@ void console_init(void) {
 	unsigned int f_width = font_get_char_width(&active_font);
 	unsigned int f_height = font_get_char_height(&active_font);
 
-	if (f_width == 0 || f_height == 0) {
+	if (unlikely(f_width == 0 || f_height == 0)) {
 		return;
 	}
 
@@ -162,7 +165,7 @@ void console_clear(void) {
 }
 
 void console_scroll(void) {
-	if (!console_initialized_flag || screen_rows <= 1) {
+	if (unlikely(!console_initialized_flag || screen_rows <= 1)) {
 		return;
 	}
 
@@ -189,7 +192,7 @@ void console_scroll(void) {
 }
 
 void console_putchar_colored(char c, u32 fg_color, u32 bg_color) {
-	if (!console_initialized_flag) {
+	if (unlikely(!console_initialized_flag)) {
 		return;
 	}
 
@@ -267,7 +270,7 @@ void console_reset_fg_color(void) {
 }
 
 void console_log(int level, const char *message) {
-	if (!console_initialized_flag)
+	if (unlikely(!console_initialized_flag))
 		return;
 
 	u64 uptime_ms = timer_get_uptime_ms();

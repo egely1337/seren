@@ -137,8 +137,8 @@ static int psf_font_interface_get_glyph(kernel_font_t *font, unsigned char c,
 
 int font_init_psf(kernel_font_t *font, const void *psf_binary_start_addr,
 		  size_t psf_binary_size) {
-	if (!font || !psf_binary_start_addr ||
-	    psf_binary_size < sizeof(psf1_header_t)) {
+	if (unlikely(!font || !psf_binary_start_addr ||
+		     psf_binary_size < sizeof(psf1_header_t))) {
 		return -1;
 	}
 	const unsigned char *data_ptr =
