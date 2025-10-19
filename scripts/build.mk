@@ -32,7 +32,7 @@ $(SBUILD_OUTPUT)/$(CURDIR_REL)/module.o: $(local-objs) $(subdir-objs)
 	@echo "  LD		[module] $@"
 	@$(LD) -r -o $@ $^
 
-$(subdir-objs):
+$(subdir-objs): FORCE
 	@$(MAKE) -f $(TOPDIR)/scripts/build.mk -C $(patsubst $(SBUILD_OUTPUT)/$(CURDIR_REL)/%/module.o,%,$@)
 
 vpath %.c $(CURDIR)
@@ -52,3 +52,5 @@ $(SBUILD_OUTPUT)/$(CURDIR_REL)/%.o: %.psf
 	$(Q)$(OBJCOPY) -I binary -O $(ELF_TARGET_FORMAT) $< $@
 
 -include $(local-objs:.o=.d)
+
+FORCE:

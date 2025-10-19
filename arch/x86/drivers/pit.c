@@ -7,6 +7,7 @@
 
 #include <drivers/pit.h>
 #include <io.h>
+#include <nucleus/init.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/printk.h>
 #include <pic.h>
@@ -32,3 +33,13 @@ void timer_init(void) {
 }
 
 u64 timer_get_uptime_ms(void) { return g_system_ticks * 10; }
+
+static int __init setup_timer(void) {
+	timer_init();
+
+	pic_unmask_irq(0);
+
+	return 0;
+}
+
+device_initcall(setup_timer);

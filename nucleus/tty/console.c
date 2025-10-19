@@ -8,6 +8,7 @@
 #include <lib/format.h>
 #include <lib/string.h>
 #include <limine.h>
+#include <nucleus/init.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/tty/font.h>
 

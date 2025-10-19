@@ -7,6 +7,7 @@
 
 #include <lib/string.h>
 #include <nucleus/fs/vfs.h>
+#include <nucleus/init.h>
 #include <nucleus/mm/slab.h>
 #include <nucleus/printk.h>
 
@@ -92,3 +93,11 @@ void vfs_mount_root(struct filesystem *rootfs) {
 already_mounted:
 	pr_crit("Root may be already mounted.\n");
 }
+
+static int __init setup_vfs(void) {
+	vfs_init();
+
+	return 0;
+}
+
+subsys_initcall(setup_vfs);

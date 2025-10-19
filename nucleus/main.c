@@ -3,6 +3,8 @@
  * Copyright (C) 2025 Arda Yetistiren
  */
 
+#define pr_fmt(fmt) "init: " fmt
+
 #include <arch.h>
 #include <asm/irqflags.h>
 #include <drivers/input/keyboard.h>
@@ -10,9 +12,11 @@
 #include <lib/string.h>
 #include <limine.h>
 #include <nucleus/fs/vfs.h>
+#include <nucleus/init.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/mm/slab.h>
+#include <nucleus/panic.h>
 #include <nucleus/printk.h>
 #include <nucleus/sched/sched.h>
 #include <nucleus/tty/console.h>
@@ -32,33 +36,26 @@ __attribute__((
     used, section(".limine_requests"))) volatile struct limine_memmap_request
     memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 0};
 
+static void do_initcalls(void) {
+	pr_info("Running initcalls...\n");
+	for (initcall_t *call = &__initcall_start; call < &__initcall_end;
+	     call++) {
+		int ret = (*call)();
+		if (ret != 0) {
+			panic("initcall failed with exit code %d", ret);
+		}
+	}
+}
+
 void kmain(void) {
 	console_init();
-	pr_info("Seren OS booting...\n");
+
+	do_initcalls();
+
+	pr_info("Seren OS is booting...\n");
 	pr_info("LFB GFX, PSF Font, console initialized.\n");
 
-	arch_init();
-
-	mem_init(&memmap_request);
-	kheap_init(NULL, 0);
-
-	vfs_init();
-
-	keyboard_init();
-	pr_info("Keyboard driver initialized.\n");
-
-	timer_init();
-	pr_info("Timer driver initialized.\n");
-
-	// TODO: Move this behind an arch-independent API
-	pic_unmask_irq(1);
-	pr_info("Unmasked Keyboard (IRQ1).\n");
-
-	pic_unmask_irq(0);
-	pr_info("Unmasked Timer (IRQ0).\n");
-
 	sched_init();
-
 	local_irq_enable();
 
 	pr_info(

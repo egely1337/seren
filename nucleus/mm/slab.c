@@ -6,6 +6,7 @@
 #define pr_fmt(fmt) "slab: " fmt
 
 #include <lib/string.h>
+#include <nucleus/init.h>
 #include <nucleus/list.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/mm/slab.h>
@@ -394,3 +395,11 @@ void *kcalloc(size_t n, size_t size) {
 		memset(p, 0, bytes);
 	return p;
 }
+
+static int __init setup_kheap(void) {
+	kheap_init(NULL, 0);
+
+	return 0;
+}
+
+postcore_initcall(setup_kheap);

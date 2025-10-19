@@ -48,33 +48,40 @@ else
 	BUILD_DESC	:= 
 endif
 
+export CONFIG_TEST
+
 MODULE_O	:= $(SBUILD_OUTPUT)/module.o
 OS_ISO		:= $(SBUILD_OUTPUT)/seren-$(ARCH).iso
 LIMINE_DIR	:= limine
 KERNEL_ELF	:= $(SBUILD_OUTPUT)/$(KERNEL_NAME).elf
-
-export CONFIG_TEST
-
 ISO_ROOT	:= $(SBUILD_OUTPUT)/iso_root
 LIMINE_STAMP := $(LIMINE_DIR)/.fetched
-
 ARCH_MAKEFILE	:= $(TOPDIR)/arch/$(SRCARCH)/Makefile
 
 -include $(ARCH_MAKEFILE)
 
+LINKER_SRC	:= $(TOPDIR)/arch/$(SRCARCH)/linker.lds.S
+LINKER_LDS	:= $(SBUILD_OUTPUT)/linker.ld
+
 export ELF_TARGET_FORMAT
+
+ALL_SOURCES :=	$(shell find . -name '*.c' -o -name '*.S' -o -name '*.h')
 
 # ---[ Core Build Targets ]--- 
 
-.PHONY: all clean
+.PHONY: all clean FORCE
 
 all: $(OS_ISO) ## Build the final bootable OS image. (default)
 
-$(MODULE_O):
+$(MODULE_O): FORCE $(ALL_SOURCES)
 	@echo "DESCEND into build..."
 	$(Q)$(MAKE) -f $(TOPDIR)/scripts/build.mk -C .
 
-$(KERNEL_ELF): $(MODULE_O) $(TOPDIR)/arch/$(SRCARCH)/linker.ld
+$(LINKER_LDS): $(LINKER_SRC)
+	@echo "  CPP       $(patsubst $(TOPDIR)/%,%,$(LINKER_SRC))"
+	$(Q)$(CC) $(CFLAGS) -E -P -o $@ $<
+
+$(KERNEL_ELF): $(MODULE_O) $(LINKER_LDS)
 	@echo "  LD		$@"
 	$(Q)$(LD) $(LDFLAGS) -o $@ $< 
 
@@ -133,3 +140,5 @@ help: ## Display this help message.
 	@echo "  ARCH=...      Specify the target architecture (e.g., x86_64)."
 	@echo "  CROSS_COMPILE=... Specify the toolchain prefix (e.g., x86_64-elf-)."
 	@echo ""
+
+FORCE:

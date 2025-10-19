@@ -7,6 +7,7 @@
 
 #include <limine.h>
 #include <nucleus/config.h>
+#include <nucleus/init.h>
 #include <nucleus/mm/pmm.h>
 #include <nucleus/panic.h>
 #include <nucleus/printk.h>
@@ -19,6 +20,8 @@ static unsigned long max_pfn;
 static unsigned long nr_free;
 
 extern volatile struct limine_hhdm_request hhdm_request;
+extern volatile struct limine_memmap_request memmap_request;
+
 extern char _kernel_end[];
 
 /**
@@ -387,3 +390,11 @@ u64 totalram_pages(void) { return max_pfn << PAGE_SHIFT; }
 u64 freeram_pages(void) { return nr_free << PAGE_SHIFT; }
 
 u64 usedram_pages(void) { return (max_pfn - nr_free) << PAGE_SHIFT; }
+
+static int __init pmm_setup(void) {
+	mem_init(&memmap_request);
+
+	return 0;
+}
+
+core_initcall(pmm_setup);

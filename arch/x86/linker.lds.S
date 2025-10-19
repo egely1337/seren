@@ -10,6 +10,8 @@
 
 /* TODO: Add KASLR support */
 
+#include <asm-generic/linker.lds.h>
+
 OUTPUT_FORMAT(elf64-x86-64)
 
 ENTRY(_start)
@@ -25,6 +27,8 @@ PHDRS
 	phdr_text		PT_LOAD FLAGS(5);
 	phdr_rodata		PT_LOAD FLAGS(4);
 	phdr_data		PT_LOAD FLAGS(6);
+
+	phdr_init		PT_LOAD FLAGS(5);
 }
 
 SECTIONS
@@ -53,14 +57,32 @@ SECTIONS
 		*(.data .data.*)
 	} :phdr_data
 
-	. = ALIGN(PAGE_SIZE);
-
 	.bss : {
 		*(.bss .bss.*)
 		*(COMMON)
 	} :phdr_data
 
 	. = ALIGN(PAGE_SIZE);
+
+	__init_begin = .;
+
+	.init : {
+		. = ALIGN(4);
+		*(.init.text)
+
+		. = ALIGN(8);
+		*(.init.rodata)
+		__initcall_start = .;
+		INIT_CALLS
+		__initcall_end = .;
+
+		. = ALIGN(4);
+		*(.init.data)
+	} :phdr_init
+
+	. = ALIGN(PAGE_SIZE);
+	__init_end = .;
+
 	_kernel_end = .;
 
 	/DISCARD/ : {

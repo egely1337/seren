@@ -1,3 +1,3 @@
-LDFLAGS += -T $(TOPDIR)/arch/x86/linker.ld
+LDFLAGS += -T $(SBUILD_OUTPUT)/linker.ld
 CFLAGS += -DARCH_X86_64
 ELF_TARGET_FORMAT := elf64-x86-64

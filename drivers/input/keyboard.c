@@ -4,9 +4,11 @@
  */
 
 #include <io.h>
+#include <nucleus/init.h>
 #include <nucleus/interrupt.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/types.h>
+#include <pic.h>
 
 #define SCANCODE_MAX 88
 
@@ -104,3 +106,13 @@ char keyboard_getchar(void) {
 
 	return c;
 }
+
+static int __init setup_keyboard(void) {
+	keyboard_init();
+
+	pic_unmask_irq(1);
+
+	return 0;
+}
+
+device_initcall(setup_keyboard);

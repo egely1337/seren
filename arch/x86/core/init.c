@@ -7,6 +7,7 @@
 
 #include <asm/gdt.h>
 #include <idt.h>
+#include <nucleus/init.h>
 #include <nucleus/printk.h>
 #include <pic.h>
 
@@ -24,3 +25,11 @@ void arch_init(void) {
 
 	pr_info("x86_64 architecture initialization complete\n");
 }
+
+static int __init setup_arch(void) {
+	arch_init();
+
+	return 0;
+}
+
+arch_initcall(setup_arch);
