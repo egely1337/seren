@@ -16,22 +16,24 @@ bin-list := $(filter %.o, $(obj-bin-y))
 
 local-c-s-objs := $(patsubst %,$(SBUILD_OUTPUT)/$(CURDIR_REL)/%,$(obj-list))
 local-bin-objs := $(patsubst %,$(SBUILD_OUTPUT)/$(CURDIR_REL)/%,$(bin-list))
-
 local-objs := $(local-c-s-objs) $(local-bin-objs)
 
+CFLAGS-$(CONFIG_TEST) += -DSERENOS_TEST_BUILD
+CFLAGS += $(CFLAGS-y)
+
 subdirs		:= $(filter %/, $(obj-y))
-subdir-objs	:= $(patsubst %/,$(SBUILD_OUTPUT)/$(CURDIR_REL)/%/built-in.o,$(subdirs))
+subdir-objs	:= $(patsubst %/,$(SBUILD_OUTPUT)/$(CURDIR_REL)/%/module.o,$(subdirs))
 
 .PHONY: all
 
-all: $(SBUILD_OUTPUT)/$(CURDIR_REL)/built-in.o
+all: $(SBUILD_OUTPUT)/$(CURDIR_REL)/module.o
 
-$(SBUILD_OUTPUT)/$(CURDIR_REL)/built-in.o: $(local-objs) $(subdir-objs)
-	@echo "  LD		[built-in] $@"
+$(SBUILD_OUTPUT)/$(CURDIR_REL)/module.o: $(local-objs) $(subdir-objs)
+	@echo "  LD		[module] $@"
 	@$(LD) -r -o $@ $^
 
 $(subdir-objs):
-	@$(MAKE) -f $(TOPDIR)/scripts/build.mk -C $(patsubst $(SBUILD_OUTPUT)/$(CURDIR_REL)/%/built-in.o,%,$@)
+	@$(MAKE) -f $(TOPDIR)/scripts/build.mk -C $(patsubst $(SBUILD_OUTPUT)/$(CURDIR_REL)/%/module.o,%,$@)
 
 vpath %.c $(CURDIR)
 vpath %.S $(CURDIR)

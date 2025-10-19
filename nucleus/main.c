@@ -64,6 +64,10 @@ void kmain(void) {
 	pr_info(
 	    "Initialization sequence complete. You can now type. See you <3\n");
 
+#ifdef SERENOS_TEST_BUILD
+	pr_notice("This is the test build!\n");
+#endif
+
 	while (1) {
 		char c = keyboard_getchar();
 		printk("%c", c);
