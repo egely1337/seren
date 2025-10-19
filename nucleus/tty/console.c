@@ -9,16 +9,19 @@
 #include <lib/string.h>
 #include <limine.h>
 #include <nucleus/init.h>
+#include <nucleus/spinlock.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/tty/font.h>
 
-#define CONSOLE_READY  (console_initialized && fb && fb->address)
+#define CONSOLE_READY  (console_initialized_flag && active_gfx_device.address)
 #define TAB_STOP_WIDTH 4
 
 extern const unsigned char _binary_font_psf_start[];
 extern const unsigned char _binary_font_psf_end[];
 
 extern volatile struct limine_framebuffer_request framebuffer_request;
+
+static spinlock_t console_lock = SPIN_LOCK_UNLOCKED;
 
 static gfx_device_t active_gfx_device;
 static kernel_font_t active_font;
@@ -95,6 +98,83 @@ static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
 	}
 }
 
+/**
+ * __console_scroll - Internal scroll worker. ASSUMES LOCK IS HELD.
+ */
+static void __console_scroll(void) {
+	unsigned int char_height = font_get_char_height(&active_font);
+	size_t line_size_bytes = active_gfx_device.pitch * char_height;
+	size_t scroll_size_bytes = line_size_bytes * (screen_rows - 1);
+
+	void *dest = active_gfx_device.address;
+	void *src = (char *)dest + line_size_bytes;
+
+	memmove(dest, src, scroll_size_bytes);
+
+	void *last_line_start = (char *)dest + scroll_size_bytes;
+	size_t pixels_in_line = line_size_bytes / 4;
+	for (size_t i = 0; i < pixels_in_line; i++) {
+		((u32 *)last_line_start)[i] = current_bg_color;
+	}
+}
+
+/**
+ * __console_putchar - Internal character output worker. ASSUMES LOCK IS HELD.
+ */
+static void __console_putchar(char c) {
+	if (cursor_y >= (int)screen_rows) {
+		__console_scroll();
+		cursor_y = screen_rows - 1;
+	}
+
+	switch (c) {
+	case '\n':
+		cursor_x = 0;
+		cursor_y++;
+		break;
+	case '\r':
+		cursor_x = 0;
+		break;
+	case '\b':
+		if (cursor_x > 0) {
+			cursor_x--;
+		} else if (cursor_y > 0) {
+			cursor_y--;
+			cursor_x = screen_cols - 1;
+		}
+		console_render_glyph(' ', cursor_x, cursor_y, current_bg_color,
+				     current_bg_color);
+		break;
+	case '\t': {
+		int spaces_to_next_tab =
+		    TAB_STOP_WIDTH - (cursor_x % TAB_STOP_WIDTH);
+		for (int i = 0; i < spaces_to_next_tab; i++) {
+			__console_putchar(' ');
+		}
+		break;
+	}
+	default:
+		if (cursor_x >= (int)screen_cols) {
+			cursor_x = 0;
+			cursor_y++;
+			if (cursor_y >= (int)screen_rows) {
+				__console_scroll();
+				cursor_y = screen_rows - 1;
+			}
+		}
+
+		console_render_glyph(c, cursor_x, cursor_y, current_fg_color,
+				     current_bg_color);
+		cursor_x++;
+		break;
+	}
+
+	if (cursor_y >= (int)screen_rows) {
+		__console_scroll();
+		cursor_y = screen_rows - 1;
+	}
+}
+
 void console_init(void) {
 	if (unlikely(console_initialized_flag)) {
 		return;
@@ -155,118 +235,56 @@ void console_init(void) {
 }
 
 void console_clear(void) {
-	if (!console_initialized_flag || !active_gfx_device.clear_screen) {
+	if (unlikely(!CONSOLE_READY)) {
 		return;
 	}
+
+	unsigned long flags;
+	spin_lock_irqsave(&console_lock, flags);
 
 	gfx_clear_screen(&active_gfx_device, current_bg_color);
 	cursor_x = 0;
 	cursor_y = 0;
-}
 
-void console_scroll(void) {
-	if (unlikely(!console_initialized_flag || screen_rows <= 1)) {
-		return;
-	}
-
-	unsigned int char_height = font_get_char_height(&active_font);
-	size_t line_size_bytes = active_gfx_device.pitch * char_height;
-
-	size_t scroll_size_bytes = line_size_bytes * (screen_rows - 1);
-
-	void *dest = active_gfx_device.address;
-	void *src =
-	    (void *)((uintptr_t)active_gfx_device.address + line_size_bytes);
-
-	memmove(dest, src, scroll_size_bytes);
-
-	void *last_line_start =
-	    (void *)((uintptr_t)active_gfx_device.address + scroll_size_bytes);
-
-	u32 *last_line_pixels = (u32 *)last_line_start;
-	size_t pixels_in_line = line_size_bytes / 4;
-
-	for (size_t i = 0; i < pixels_in_line; i++) {
-		last_line_pixels[i] = current_bg_color;
-	}
-}
-
-void console_putchar_colored(char c, u32 fg_color, u32 bg_color) {
-	if (unlikely(!console_initialized_flag)) {
-		return;
-	}
-
-	if (cursor_y >= (int)screen_rows) {
-		console_scroll();
-		cursor_y = screen_rows - 1;
-	}
-
-	switch (c) {
-	case '\n':
-		cursor_x = 0;
-		cursor_y++;
-		break;
-	case '\r':
-		cursor_x = 0;
-		break;
-	case '\b':
-		if (cursor_x > 0) {
-			cursor_x--;
-			console_render_glyph(' ', cursor_x, cursor_y, bg_color,
-					     bg_color);
-		} else if (cursor_y > 0) {
-			cursor_y--;
-			cursor_x = (screen_cols > 0) ? (screen_cols - 1) : 0;
-			console_render_glyph(' ', cursor_x, cursor_y, bg_color,
-					     bg_color);
-		}
-		break;
-	case '\t': {
-		int spaces_to_next_tab =
-		    TAB_STOP_WIDTH - (cursor_x % TAB_STOP_WIDTH);
-		for (int i = 0; i < spaces_to_next_tab; i++) {
-			console_putchar_colored(' ', fg_color, bg_color);
-		}
-	}
-		return;
-	default:
-		if (cursor_x >= (int)screen_cols && screen_cols > 0) {
-			cursor_x = 0;
-			cursor_y++;
-		}
-
-		if (cursor_y >= (int)screen_rows && screen_rows > 0) {
-			console_scroll();
-			cursor_y = screen_rows - 1;
-		}
-
-		console_render_glyph(c, cursor_x, cursor_y, fg_color, bg_color);
-		cursor_x++;
-		break;
-	}
-
-	if (cursor_y >= (int)screen_rows && screen_rows > 0) {
-		console_scroll();
-		cursor_y = screen_rows - 1;
-	}
+	spin_unlock_irqrestore(&console_lock, flags);
 }
 
 void console_putchar(char c) {
-	console_putchar_colored(c, current_fg_color, current_bg_color);
+	if (unlikely(!CONSOLE_READY))
+		return;
+
+	unsigned long flags;
+	spin_lock_irqsave(&console_lock, flags);
+	__console_putchar(c);
+	spin_unlock_irqrestore(&console_lock, flags);
 }
 
 void console_writestring(const char *str) {
-	if (!str || !console_initialized_flag)
+	if (unlikely(!str || !CONSOLE_READY))
 		return;
+
+	unsigned long flags;
+	spin_lock_irqsave(&console_lock, flags);
+
 	for (size_t i = 0; str[i] != '\0'; i++) {
-		console_putchar(str[i]);
+		__console_putchar(str[i]);
 	}
+
+	spin_unlock_irqrestore(&console_lock, flags);
 }
 
-void console_set_fg_color(u32 color) { current_fg_color = color; }
+void console_set_fg_color(u32 color) {
+	unsigned long flags;
+	spin_lock_irqsave(&console_lock, flags);
+	current_fg_color = color;
+	spin_unlock_irqrestore(&console_lock, flags);
+}
 
 void console_reset_fg_color(void) {
+	unsigned long flags;
+	spin_lock_irqsave(&console_lock, flags);
 	current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
+	spin_unlock_irqrestore(&console_lock, flags);
 }
 
 void console_log(int level, const char *message) {
@@ -281,9 +299,6 @@ void console_log(int level, const char *message) {
 
 	ksnprintf(time_buf, sizeof(time_buf), "[%5lu.%03lu] ", seconds,
 		  milliseconds);
-
-	console_reset_fg_color();
-	console_writestring(time_buf);
 
 	const char *prefix_text = NULL;
 	u32 prefix_color = CONSOLE_DEFAULT_FG_COLOR;
@@ -319,17 +334,30 @@ void console_log(int level, const char *message) {
 		break;
 	}
 
+	unsigned long flags;
+	spin_lock_irqsave(&console_lock, flags);
+
+	u32 original_color = current_fg_color;
+	current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
+	for (char *p = time_buf; *p; p++)
+		__console_putchar(*p);
+
 	if (prefix_text) {
-		console_reset_fg_color();
-		console_putchar('[');
-		console_set_fg_color(prefix_color);
-		console_writestring(prefix_text);
-		console_reset_fg_color();
-		console_writestring("] ");
+		__console_putchar('[');
+		current_fg_color = prefix_color;
+		for (const char *p = prefix_text; *p; p++)
+			__console_putchar(*p);
+		current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
+		__console_putchar(']');
+		__console_putchar(' ');
 	} else {
-		console_writestring("       ");
+		for (int i = 0; i < 7; i++)
+			__console_putchar(' ');
 	}
 
-	console_reset_fg_color();
-	console_writestring(message);
+	for (const char *p = message; *p; p++)
+		__console_putchar(*p);
+
+	current_fg_color = original_color;
+	spin_unlock_irqrestore(&console_lock, flags);
 }
