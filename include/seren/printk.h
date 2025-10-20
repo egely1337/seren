@@ -27,6 +27,17 @@
 #define pr_fmt(fmt) fmt
 #endif
 
+struct console {
+	char name[16];
+	void (*write)(const char *buf, unsigned int len);
+	struct console *next;
+};
+
+/**
+ * register_console - Register a console device with the printk subsystem.
+ */
+void register_console(struct console *con);
+
 /**
  * printk - The core kernel printing function.
  *

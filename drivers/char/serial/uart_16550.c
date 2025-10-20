@@ -7,10 +7,10 @@
 
 #include <io.h>
 #include <lib/string.h>
-#include <seren/console.h>
 #include <seren/init.h>
 #include <seren/printk.h>
 #include <seren/spinlock.h>
+#include <seren/tty.h>
 
 #define COM1_PORT 0x3F8
 
@@ -46,7 +46,8 @@ static int is_transmit_empty(u16 port) {
 
 static void serial_putchar(u16 port, char a) {
 	while (is_transmit_empty(port) == 0)
-		outb(port, a);
+		;
+	outb(port, a);
 }
 
 static void serial_console_write(const char *buf, unsigned int len) {

@@ -5,12 +5,12 @@
 
 #define pr_fmt(fmt) "irq: " fmt
 
+#include <pic.h>
 #include <seren/interrupt.h>
 #include <seren/printk.h>
 #include <seren/sched/sched.h>
 #include <seren/stddef.h>
 #include <seren/types.h>
-#include <pic.h>
 
 static irq_handler_t __irq_handlers[16] = {NULL};
 

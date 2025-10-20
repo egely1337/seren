@@ -5,11 +5,11 @@
 
 #include <lib/format.h>
 #include <lib/string.h>
-#include <seren/console.h>
 #include <seren/init.h>
 #include <seren/pit.h>
 #include <seren/printk.h>
 #include <seren/spinlock.h>
+#include <seren/tty.h>
 #include <seren/vc.h>
 
 #define COLOR_BLACK	    0x00000000
@@ -33,6 +33,10 @@ static int cursor_y = 0;
 static u32 fg_color = CONSOLE_DEFAULT_FG;
 static u32 bg_color = CONSOLE_DEFAULT_BG;
 static bool initialized = false;
+
+#define LINE_BUF_SIZE 256
+static char line_buffer[LINE_BUF_SIZE];
+static unsigned int line_buffer_pos = 0;
 
 static u32 level_colors[] = {
     [LOGLEVEL_EMERG] = COLOR_BRIGHT_RED,
@@ -152,6 +156,39 @@ void console_log(int level, const char *message) {
 	for (const char *p = message; *p; p++)
 		__console_putchar(*p);
 	fg_color = orig_color;
+	spin_unlock_irqrestore(&console_lock, flags);
+}
+
+void tty_receive_char(char c) {
+	if (!initialized)
+		return;
+
+	u64 flags;
+	spin_lock_irqsave(&console_lock, flags);
+
+	switch (c) {
+	case '\b': // Backspace
+		if (line_buffer_pos > 0) {
+			line_buffer_pos--;
+			__console_putchar('\b');
+		}
+		break;
+	case '\n': // Enter
+		line_buffer[line_buffer_pos] = '\0';
+		__console_putchar('\n');
+		// For now, we just print the line that was "submitted".
+		// In the future, this would wake up a waiting process.
+		pr_info("TTY received line: '%s'\n", line_buffer);
+		line_buffer_pos = 0;
+		break;
+	default: // Regular character
+		if (line_buffer_pos < LINE_BUF_SIZE - 1) {
+			line_buffer[line_buffer_pos++] = c;
+			__console_putchar(c); // Echo the character
+		}
+		break;
+	}
+
 	spin_unlock_irqrestore(&console_lock, flags);
 }
 

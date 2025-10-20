@@ -6,9 +6,9 @@
 #include <lib/format.h>
 #include <lib/stdarg.h>
 #include <lib/string.h>
-#include <seren/console.h>
 #include <seren/log.h>
 #include <seren/printk.h>
+#include <seren/tty.h>
 #include <seren/types.h>
 
 #define PRINTK_BUF_SIZE 512

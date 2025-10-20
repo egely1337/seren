@@ -10,7 +10,6 @@
 #include <lib/string.h>
 #include <limine.h>
 #include <pic.h>
-#include <seren/console.h>
 #include <seren/fs/vfs.h>
 #include <seren/init.h>
 #include <seren/input.h>
@@ -21,6 +20,7 @@
 #include <seren/pit.h>
 #include <seren/printk.h>
 #include <seren/sched/sched.h>
+#include <seren/tty.h>
 #include <seren/types.h>
 
 // clang-format off
