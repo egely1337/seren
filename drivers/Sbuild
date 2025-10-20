@@ -1,1 +1,1 @@
-obj-y += char/ input/ video/
+obj-y += char/ input/ video/ tty/

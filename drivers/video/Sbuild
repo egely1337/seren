@@ -1,1 +1,1 @@
-obj-y += fb/ font/ console.o
+obj-y += fb/ font/ fbcon.o
