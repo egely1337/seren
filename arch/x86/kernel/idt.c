@@ -15,15 +15,16 @@
 #define DECLARE_ISR(n) extern void isr##n(void)
 #define DECLARE_IRQ(n) extern void irq_stub_##n(void)
 
+// It makes declarations messy
 // clang-format off
 
-// Exceptions
+// CPU Exceptions
 DECLARE_ISR(0); DECLARE_ISR(1); DECLARE_ISR(2); DECLARE_ISR(3); DECLARE_ISR(4);
 DECLARE_ISR(5); DECLARE_ISR(6); DECLARE_ISR(7); DECLARE_ISR(8); DECLARE_ISR(9);
 DECLARE_ISR(10); DECLARE_ISR(11); DECLARE_ISR(12); DECLARE_ISR(13); DECLARE_ISR(14);
 DECLARE_ISR(16); DECLARE_ISR(17); DECLARE_ISR(18); DECLARE_ISR(19); DECLARE_ISR(20);
 
-// IRQs
+// Hardware IRQs
 DECLARE_IRQ(0); DECLARE_IRQ(1); DECLARE_IRQ(2); DECLARE_IRQ(3); DECLARE_IRQ(4);
 DECLARE_IRQ(5); DECLARE_IRQ(6); DECLARE_IRQ(7); DECLARE_IRQ(8); DECLARE_IRQ(9);
 DECLARE_IRQ(10); DECLARE_IRQ(11); DECLARE_IRQ(12); DECLARE_IRQ(13); DECLARE_IRQ(14);
@@ -31,13 +32,24 @@ DECLARE_IRQ(15);
 
 // clang-format on
 
+/**
+ * struct idt_init_entry - Helper struct for populating the IDT.
+ * @vector: The vector number (0-255).
+ * @handler: A pointer to the assembly stub for this vector.
+ * @ist: The Interrupt Stack Table index to use (0 for none).
+ */
 struct idt_init_entry {
 	u8 vector;
 	void (*handler)(void);
 	u8 ist;
 };
 
+/**
+ * Much cleaner than a giant switch statement or a series of `idt_set_gate`
+ * calls.
+ */
 static const struct idt_init_entry idt_entries[] = {
+    /* CPU Exceptions */
     {DIVIDE_ERROR_VECTOR, isr0, 0},
     {DEBUG_VECTOR, isr1, 0},
     {NMI_VECTOR, isr2, 0},
@@ -58,6 +70,7 @@ static const struct idt_init_entry idt_entries[] = {
     {SIMD_FP_VECTOR, isr19, 0},
     {VIRTUALIZATION_VECTOR, isr20, 0},
 
+    /* Hardware IRQs */
     {PIC1_START_VECTOR + 0, irq_stub_0, 0},
     {PIC1_START_VECTOR + 1, irq_stub_1, 0},
     {PIC1_START_VECTOR + 2, irq_stub_2, 0},
@@ -79,6 +92,10 @@ static const struct idt_init_entry idt_entries[] = {
 static idt_entry_t idt[IDT_MAX_DESCRIPTORS];
 static idt_ptr_t idtp;
 
+/**
+ * This function just does the bit-twiddling necessary to correctly format
+ * an IDT entry.
+ */
 void idt_set_gate(u8 vector_num, u64 isr_address, u16 cs_selector,
 		  u8 attributes, u8 ist) {
 	idt_entry_t *descriptor = &idt[vector_num];
@@ -95,6 +112,7 @@ void idt_set_gate(u8 vector_num, u64 isr_address, u16 cs_selector,
 extern void idt_load(idt_ptr_t *idtp_param);
 
 void idt_init(void) {
+	// All kernel-level interrupts will use these same attributes
 	const u8 gate_attrs =
 	    IDT_ATTR_PRESENT | IDT_TYPE_INTERRUPT_GATE | IDT_ATTR_RING0;
 

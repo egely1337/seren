@@ -40,6 +40,13 @@ static const char *exception_messages[] = {
     [VIRTUALIZATION_VECTOR] = "Virtualization Exception",
 };
 
+/**
+ * do_exception - Handler for all CPU exceptions (vectors 0-31).
+ *
+ * This function is called when a synchronous CPU trap occurs. Most of these
+ * are unrecoverable so our job is just to print a helpful message and call
+ * `die()` to halt the system.
+ */
 static void do_exception(struct pt_regs *regs) {
 	const char *msg = "Unknown Exception";
 	if (regs->vector < (sizeof(exception_messages) / sizeof(char *)) &&
@@ -49,6 +56,11 @@ static void do_exception(struct pt_regs *regs) {
 	die(msg, regs);
 }
 
+/**
+ * do_irq - Handler for all hardware interrupts (vectors 32+).
+ *
+ * Returns 1 if a reschedule is needed, 0 otherwise.
+ */
 static int do_irq(struct pt_regs *regs) {
 	int reschedule = 0;
 
@@ -58,6 +70,10 @@ static int do_irq(struct pt_regs *regs) {
 		reschedule = 1;
 	}
 
+	/**
+	 * IRQ7 is famous for firing spuriously on older hardware. The standard
+	 * way to check is to read the PIC's ISR.
+	 */
 	if (irq == 7 && !(pic_read_isr() & (1 << 7))) {
 		pr_debug("spurious IRQ7 detected\n");
 		return 0;
@@ -74,11 +90,16 @@ static int do_irq(struct pt_regs *regs) {
 	return reschedule;
 }
 
+/**
+ * handle_interrupt - The main C entry point for all interrupts and exceptions.
+ *
+ * This function is called from our stubs. It looks at the vector number
+ * and decides whether to treat it as an exception or a hardware IRQ.
+ */
 int handle_interrupt(struct pt_regs *regs) {
 	if (regs->vector < FIRST_EXTERNAL_VECTOR) {
 		do_exception(regs);
-		// Exceptions are fatal and never return
-		return 0;
+		return 0; /* Should be unreachable */
 	} else {
 		return do_irq(regs);
 	}
@@ -106,6 +127,10 @@ void free_irq(u32 irq) {
 	if (unlikely(irq >= NR_IRQS))
 		return;
 
+	/**
+	 * We mask the IRQ before removing the handler to prevent
+	 * race condition.
+	 */
 	pic_mask_irq(irq);
 
 	spin_lock_irqsave(&irq_handlers_lock, flags);

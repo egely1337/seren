@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Copyright (C) 2025 Arda Yetistiren
  */
@@ -16,6 +16,9 @@ stack_top:
 _start:
 	movq $stack_top, %rsp
 
+	/**
+	 * And we're off! We jump into the high-level C part of the kernel.
+	 */
 	call kmain
 
 .halt_loop:

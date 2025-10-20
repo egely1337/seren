@@ -1,25 +1,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef KERNEL_IO_H
-#define KERNEL_IO_H
+#ifndef ARCH_IO_H
+#define ARCH_IO_H
 
 #include <seren/types.h>
 
 /**
- * @brief Writes a byte to the specified I/O port.
- * (This is a declaration; implementation is arch-specific)
+ * outb - Write a byte to an I/O port.
+ * @port: The I/O port.
+ * @value: The byte to write.
  */
 static inline void outb(u16 port, u8 value);
 
 /**
- * @brief Reads a byte from the specified I/O port.
- * (This is a declaration; implementation is arch-specific)
+ * inb - Read a byte from an I/O port.
+ * @port: The I/O port.
+ *
+ * Returns the byte read.
  */
 static u8 inb(u16 port);
 
 /**
- * @brief A short I/O delay.
- * (This is a declaration; implementation is arch-specific)
+ * io_wait - A small delay for older hardware.
+ *
+ * Some old devices need a short pause after an I/O operation.
  */
 static void io_wait(void);
 
@@ -29,4 +33,4 @@ static void io_wait(void);
 #error "Unsupported architecture for I/O operations"
 #endif
 
-#endif
+#endif // ARCH

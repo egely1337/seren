@@ -5,6 +5,17 @@
 
 #include <asm/irq_vectors.h>
 
+/**
+ * idt_entry - Macro to generate a unique assembly stup for each ISR.
+ *
+ * The CPU doesn't push the interrupt vector number or a consistent error
+ * code onto stack for all interrupts (why, bro?). To create a uniform
+ * C-callable interface (our `pt_regs` struct), we need these assembly stubs.
+ *
+ * Each stub does two things:
+ * 1. Pushes a dummy error code (0) if the CPU doesn't provide one
+ * 2. Pushes the interrupt vector number
+ */
 .macro idt_entry name, vector, has_err=0
 .global \name
 .align 8
@@ -18,9 +29,18 @@
     jmp common_interrupt_handler
 .endm
 
-
+/**
+ * common_interrupt_handler - The shared assembly code for all interrupts.
+ *
+ * After an `idt_entry` stub prepares the stack, all interrupts land here.
+ */
 .global common_interrupt_handler
 common_interrupt_handler:
+	/**
+	 * Disable interrupts to prevent nested interrupts.
+	 * The CPU does this automatically for most interrupts, but it's
+	 * good practice to be explicit.
+	 */
 	cli
 
 	pushq %rdi; pushq %rsi; pushq %rdx; pushq %rcx;
@@ -39,7 +59,7 @@ common_interrupt_handler:
 
 	movq %rsp, %rdi
 	call schedule
-	movq %rax, %rsp // CONTEXT SWITCH
+	movq %rax, %rsp // CONTEXT SWITCH HAPPENS HERE!!!!!
 
 .no_reschedule:
 	popq %r15; popq %r14; popq %r13; popq %r12;

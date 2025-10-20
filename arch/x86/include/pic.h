@@ -5,44 +5,54 @@
 
 #include <seren/types.h>
 
+/* I/O ports for the master and slave 8259 PICs. */
 #define PIC1_COMMAND_PORT 0x20
 #define PIC1_DATA_PORT	  0x21
 #define PIC2_COMMAND_PORT 0xA0
 #define PIC2_DATA_PORT	  0xA1
 
+/* End-of-Interrupt command code */
 #define PIC_EOI 0x20
 
+/**
+ * We remap the PIC interrupts to avoid conflicting with CPU exceptions.
+ * By default they overlap with vectors 8-15. We'll move them to a safe
+ * range starting at vector 32 (0x20).
+ */
 #define PIC_IRQ_OFFSET_MASTER 0x20
 #define PIC_IRQ_OFFSET_SLAVE  0x28
 
 /**
- * @brief Initializes and remaps the 8259 PICs.
- * All IRQs are initially masked after remapping.
+ * pic_init - Initialize and remap the 8259 PICs.
  */
 void pic_init(void);
 
 /**
- * @brief Sends an End-Of-Interrupt (EOI) signal to the PIC(s).
- * Must be called at the end of an IRQ handler.
- * @param irq_number The original IRQ number (0-15) that was handled.
+ * pic_send_eoi - Send an End-Of-Interrupt signal to the PIC(s).
+ * @irq_number: The hardware IRQ number (0-15) that was handled.
+ *
+ * This MUST be called at the end of an interrupt handler to let the PIC
+ * know it's okay to send more interrupts.
  */
 void pic_send_eoi(u8 irq_number);
 
 /**
- * @brief Masks (disables) a specific IRQ line on the PIC.
- * @param irq_line The IRQ line number (0-15) to mask.
+ * pic_mask_irq - Mask (disable) a specific IRQ line.
+ * @irq_line: The IRQ line (0-15) to disable.
  */
 void pic_mask_irq(u8 irq_line);
 
 /**
- * @brief Unmasks (enables) a specific IRQ line on the PIC.
- * @param irq_line The IRQ line number (0-15) to unmask.
+ * pic_unmask_irq - Unmask (enable) a specific IRQ line.
+ * @irq_line: The IRQ line (0-15) to enable.
  */
 void pic_unmask_irq(u8 irq_line);
 
 /**
- * @brief Reads the In-Service Register (ISR) of the Master PIC.
- * @return The 8-bit ISR value of the Master PIC.
+ * pic_read_isr - Read the PIC's In-Service Register.
+ *
+ * This tells us which IRQs are currently being serviced. We use
+ * this for detecting spurious interrupts.
  */
 u8 pic_read_isr(void);
 

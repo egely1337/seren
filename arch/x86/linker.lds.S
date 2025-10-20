@@ -3,11 +3,6 @@
  * Copyright (C) 2025 Arda Yetistiren
  */
 
-/* Alright, this is the blueprint for our kernel's memory layout.
-   We're making a 64-bit ELF executable that's gonna live in the "higher-half" of memory.
-   This script tells the linker where to put all the pieces, like code and data,
-   and makes sure Limine can boot it up nicely. */
-
 /* TODO: Add KASLR support */
 
 #include <asm-generic/linker.lds.h>
@@ -23,18 +18,21 @@ PAGE_SIZE = 4K;
 
 PHDRS
 {
-	phdr_limine_requests	PT_LOAD FLAGS(4);
-	phdr_text		PT_LOAD FLAGS(5);
-	phdr_rodata		PT_LOAD FLAGS(4);
-	phdr_data		PT_LOAD FLAGS(6);
+	phdr_limine_requests	PT_LOAD FLAGS(4); /* R */
+	phdr_text		PT_LOAD FLAGS(5); /* R+X */
+	phdr_rodata		PT_LOAD FLAGS(4); /* R */
+	phdr_data		PT_LOAD FLAGS(6); /* R+W */
 
-	phdr_init		PT_LOAD FLAGS(5);
+	phdr_init		PT_LOAD FLAGS(5); /* R+X */
 }
 
 SECTIONS
 {
 	. = KERNEL_BASE;
 
+	/**
+	 * Limine needs this to be at the very start of the file.
+	 */
 	.limine_requests ALIGN(PAGE_SIZE) : AT(KERNEL_PHYS_LOAD_ADDRESS) {
 		KEEP(*(.limine_requests))
 	} :phdr_limine_requests
@@ -56,7 +54,7 @@ SECTIONS
 	.data : {
 		*(.data .data.*)
 	} :phdr_data
-
+	 
 	.bss : {
 		*(.bss .bss.*)
 		*(COMMON)
