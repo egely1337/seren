@@ -5,10 +5,6 @@
 
 #include <asm/types.h>
 
-#ifndef __KERNEL__
-#warning "You are trying to use kernel headers from user space."
-#endif
-
 typedef signed int __s_pid_t;
 typedef unsigned long long __s_size_t;
 

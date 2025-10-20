@@ -8,46 +8,33 @@
 #include <seren/types.h>
 
 /**
- * @brief Converts an integer to a null-terminated string.
- *
- * @param value The integer value to convert.
- * @param str Pointer to a buffer where the resulting C-string is stored.
- * The buffer should be large enough to contain the resulting string.
- * @param base Numerical base (radix) for the conversion (e.g., 2, 8, 10, 16).
- * @param is_signed If non-zero, value is treated as signed (prepends '-' if
- * negative).
- * @param min_width Minimum width of the output string. Padded with 'pad_char'
- * if shorter.
- * @param pad_char Character to use for padding if output is shorter than
- * min_width.
- * @return A pointer to the resulting null-terminated string (same as str).
+ * itoa_k - Convert a long long to a string.
+ * @value: The number to convert.
+ * @str: The buffer to store the resulting string in.
+ * @base: The numerical base (e.g., 10 for decimal, 16 for hex).
+ * @is_signed: Treat the value as signed (adds a '-' if negative).
+ * @min_width: The minimum width of the output. Padded if necessary.
+ * @pad_char: The character to use for padding (e.g., ' ' or '0').
  */
 char *itoa_k(long long value, char *str, int base, int is_signed, int min_width,
 	     char pad_char);
 
 /**
- * @brief Kernel-level vsnprintf: formats a string into a buffer.
- *
- * Writes formatted output to a buffer `buf` of size `size` according to the
- * format string `fmt` and the variable argument list `args`.
- * Ensures null termination if `size` > 0.
- * Supports: %c, %s, %d, %i, %u, %x, %X, %p, %%.
- * Basic width and zero-padding support for integers/pointers (e.g., %08x, %5d).
- * Does NOT currently support full precision, length modifiers (l, ll, h, hh
- * fully), or float.
- *
- * @param buf The buffer to write the formatted string to.
- * @param size The maximum size of the buffer (including the null terminator).
- * @param fmt The format string.
- * @param args The variable argument list.
- * @return The number of characters that would have been written if the buffer
- * was large enough (excluding the null terminator), or a negative
- * value if an encoding error occurs or size is 0.
+ * kvsnprintf - Format a string from a va_list into a sized buffer.
+ * @buf: The destination buffer.
+ * @size: The total size of the destination buffer, including the null
+ * terminator.
+ * @fmt: The printf-style format string.
+ * @args: The va_list of arguments.
  */
 int kvsnprintf(char *buf, size_t size, const char *fmt, va_list args);
 
 /**
- * @brief Kernel-level snprintf: formats a string int o a buffer.
+ * ksnprintf - Format a string into a sized buffer.
+ * @buf: The destination buffer.
+ * @size: The total size of the buffer.
+ * @fmt: The format string.
+ * @...: The arguments to format.
  */
 int ksnprintf(char *buf, size_t size, const char *fmt, ...);
 

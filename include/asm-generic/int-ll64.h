@@ -5,6 +5,14 @@
 
 #include <uapi/asm-generic/int-ll64.h>
 
+/**
+ * These are the short, kernel-style typedefs for fixed-width integers.
+ * They are aliases for the __u8, __s32 types defined in the uapi header.
+ *
+ * This separation allows kernel code to use the convenient short names while
+ * keeping the namespace-prefixed names available for user-space compatibility.
+ */
+
 typedef __s8 s8;
 typedef __u8 u8;
 typedef __s16 s16;

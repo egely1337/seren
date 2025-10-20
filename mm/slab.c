@@ -20,6 +20,10 @@ static inline size_t __align_up(size_t size, size_t align) {
 	return (size + align - 1) & ~(align - 1);
 }
 
+/**
+ * We bould our free lists by storing a pointer to the next free object
+ * inside the storage of the current free object.
+ */
 static inline void *__obj_set_next(void *obj, void *next) {
 	*(void **)obj = next;
 	return obj;
@@ -33,19 +37,25 @@ static int kmalloc_caches_inited;
 static inline struct slab *__list_to_slab(struct list_head *head) {
 	return (struct slab *)((char *)head - offsetof(struct slab, list));
 }
-
 static inline void __slab_list_add(struct slab *sl, struct list_head *head) {
 	list_add(&sl->list, head);
 }
-
 static inline void __slab_list_del(struct slab *sl) { list_del(&sl->list); }
-
 static inline struct slab *__slab_list_first(struct list_head *head) {
 	if (list_empty(head))
 		return NULL;
 	return __list_to_slab(head->next);
 }
 
+/**
+ * __slab_create - Allocate a new page and format it as a slab.
+ * @cache: The cache that this new slab will belong to.
+ *
+ * This is called when a cache runs out of free objects and needs more memory.
+ * It gets a fresh page from the PMM, places a `struct slab` header at the
+ * start, and then carves up the rest of the page into objects, adding them
+ * all to an internal free list.
+ */
 static struct slab *__slab_create(struct kmem_cache *cache) {
 	struct page *page = alloc_page();
 	void *page_base;
@@ -101,6 +111,12 @@ static void *__slab_alloc(struct kmem_cache *cache) {
 	struct slab *sl;
 	void *obj;
 
+	/**
+	 * The allocation strategy is simple:
+	 * 1. Try to get an object from a partially full slab.
+	 * 2. If none, try to get one from a completely free slab.
+	 * 3. If none, create a brand new slab.
+	 */
 	if (!list_empty(&cache->partial)) {
 		sl = __slab_list_first(&cache->partial);
 	} else if (!list_empty(&cache->free)) {
@@ -124,19 +140,23 @@ static void *__slab_alloc(struct kmem_cache *cache) {
 	pr_debug("kmem_cache '%s': alloc obj %p (slab %p inuse=%u/%u)\n",
 		 cache->name, obj, sl, sl->inuse, sl->total);
 
-	if (sl->inuse == sl->total) {
+	/**
+	 * If it just became full, move it to the `full` list.
+	 * If it was free and is now partially used, move it to the `partial`
+	 * list.
+	 */
+	if (sl->inuse == sl->total) { /* partial -> full */
 		__slab_list_del(sl);
 		__slab_list_add(sl, &cache->full);
 		if (cache->nr_free_slabs)
 			cache->nr_free_slabs--;
-	} else {
-		if (!list_empty(&cache->free) &&
-		    sl == __slab_list_first(&cache->free)) {
-			__slab_list_del(sl);
-			__slab_list_add(sl, &cache->partial);
-			if (cache->nr_free_slabs)
-				cache->nr_free_slabs--;
-		}
+
+	} else if (!list_empty(&cache->free) && /* free -> partial */
+		   sl == __slab_list_first(&cache->free)) {
+		__slab_list_del(sl);
+		__slab_list_add(sl, &cache->partial);
+		if (cache->nr_free_slabs)
+			cache->nr_free_slabs--;
 	}
 
 	if (cache->ctor)
@@ -216,12 +236,9 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size,
 void kmem_cache_destroy(struct kmem_cache *cache) {
 	struct slab *sl;
 
-	if (!list_empty(&cache->partial)) {
-		panic("kmem_cache_destroy: partial slabs remain", NULL);
-	}
-
-	if (!list_empty(&cache->full)) {
-		panic("kmem_cache_destroy: full slabs remain", NULL);
+	if (!list_empty(&cache->partial) || !list_empty(&cache->full)) {
+		panic("kmem_cache_destroy: attempting to destroy a cache with "
+		      "active objects");
 	}
 
 	while (!list_empty(&cache->free)) {
@@ -229,6 +246,8 @@ void kmem_cache_destroy(struct kmem_cache *cache) {
 		__slab_list_del(sl);
 		__slab_release(sl);
 	}
+
+	kfree(cache);
 }
 
 void *kmem_cache_alloc(struct kmem_cache *cache) { return __slab_alloc(cache); }

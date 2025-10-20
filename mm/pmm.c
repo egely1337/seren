@@ -25,32 +25,20 @@ extern volatile struct limine_memmap_request memmap_request;
 extern char _kernel_end[];
 
 /**
- * __set_bit - Marks a page as used in the bitmap
- * @pfn:    The index of the page
+ * These are the low-level helpers for manipulating the page bitmap.
+ * `pfn >> 6` finds the u64 in the array and `pfn & 63` finds the bit within
+ * that u64.
  */
 static inline void __set_bit(u64 pfn) {
 	if (pfn >= max_pfn)
 		return;
 	bitmap[pfn >> 6] |= (1UL << (pfn & 63));
 }
-
-/**
- * __clear_bit - Marks a page as free in the bitmap
- * @pfn:    The index of the page
- */
 static inline void __clear_bit(u64 pfn) {
-	if (pfn >= max_pfn)
+	if (pfn >= max_pfn) /* Out of bounds is considered "used" */
 		return;
 	bitmap[pfn >> 6] &= ~(1UL << (pfn & 63));
 }
-
-/**
- * __test_bit - Checks if a page is marked as used in the bitmap
- * @pfn:    The index of the page
- *
- * Returns 1 if the page is used, 0 if free.
- * Returns 1 if pfn is out of bounds.
- */
 static inline int __test_bit(u64 pfn) {
 	if (pfn >= max_pfn)
 		return 1;
@@ -58,8 +46,7 @@ static inline int __test_bit(u64 pfn) {
 }
 
 /**
- * __find_free_pages - Find a contiguous block of free pages
- * @count:  The number of free pages to find
+ * __find_free_pages - A irst-fit search for a contiguous block of pages.
  */
 static s64 __find_free_pages(size_t count) {
 	u64 consecutive = 0;
@@ -83,10 +70,6 @@ static s64 __find_free_pages(size_t count) {
 	return -1;
 }
 
-/**
- * __mark_pages_inuse - Mark a range of pages as allocated
- * @count:  The number of pages to mark
- */
 static void __mark_pages_inuse(u64 start_pfn, size_t count) {
 	for (size_t i = 0; i < count; i++) {
 		__set_bit(start_pfn + i);
@@ -94,9 +77,6 @@ static void __mark_pages_inuse(u64 start_pfn, size_t count) {
 	}
 }
 
-/**
- * __mark_pages_free - Mark a range of pages as free
- */
 static void __mark_pages_free(u64 start_pfn, size_t count) {
 	for (size_t i = 0; i < count; i++) {
 		if (__test_bit(start_pfn + i)) {
@@ -106,6 +86,7 @@ static void __mark_pages_free(u64 start_pfn, size_t count) {
 	}
 }
 
+/* Fills out our `mem_map` array so phys_to_page() works. */
 static void __init_mem_map(u64 hhdm_offset, phys_addr_t mem_map_phys) {
 	mem_map = (struct page *)(hhdm_offset + mem_map_phys);
 
@@ -114,12 +95,10 @@ static void __init_mem_map(u64 hhdm_offset, phys_addr_t mem_map_phys) {
 	}
 }
 
-/**
- * Find suitable location for allocator metadata
- *
- * We need space for:
- * 1. The bitmap
- * 2. The mem_map array
+/*
+ * The PMM needs to allocate its own metadata (the bitmap and mem_map) and the
+ * kernel. This function finds a chunk of usable memory large enough to hold
+ * them.
  */
 static phys_addr_t
 __find_metadata_location(volatile struct limine_memmap_request *memmap_request,
@@ -135,6 +114,7 @@ __find_metadata_location(volatile struct limine_memmap_request *memmap_request,
 		u64 region_start = entry->base;
 		u64 region_end = entry->base + entry->length;
 
+		/* Make sure we're not overwriting the kernel. */
 		if (region_start < kernel_end)
 			region_start = kernel_end;
 
@@ -148,8 +128,9 @@ __find_metadata_location(volatile struct limine_memmap_request *memmap_request,
 	return 0;
 }
 
-/**
- * __get_kernel_end - Calculate the physical end address of the kernel
+/*
+ * Figure out where the kernel's image ends in physical memory. We prefer to
+ * use Limine's info, but fall back to the linker symbol if we have to.
  */
 static phys_addr_t
 __get_kernel_end(volatile struct limine_memmap_request *memmap_request) {

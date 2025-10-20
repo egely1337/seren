@@ -27,6 +27,16 @@
 #define pr_fmt(fmt) fmt
 #endif
 
+/**
+ * struct console - A generic interface for a message console.
+ * @name: The name of the console (e.g., "ttyS0", "fbcon").
+ * @write: A function pointer to write a string to the console device.
+ * @next: A pointer to link consoles together in a list.
+ *
+ * This structure allows `printk` to be completely decoupled from the actual
+ * output devices. We can have messages going to a serial port, a framebuffer
+ * console, or both, just by registering different console drivers.
+ */
 struct console {
 	char name[16];
 	void (*write)(const char *buf, unsigned int len);

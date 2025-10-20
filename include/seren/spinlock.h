@@ -38,8 +38,8 @@ static inline void spin_unlock(spinlock_t *lock) { arch_spin_unlock(lock); }
 
 /**
  * spin_unlock_irqrestore - Release a lock and restore local interrupt state.
- * @lock:   The spinlock to release.
- * @flags:  The interrupt flags saved by spin_lock_irqsave().
+ * @lock: The spinlock to release.
+ * @flags: The interrupt flags saved by spin_lock_irqsave().
  */
 #define spin_unlock_irqrestore(lock, flags)                                    \
 	do {                                                                   \

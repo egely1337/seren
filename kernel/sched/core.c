@@ -16,6 +16,13 @@ static task_t g_task_table[MAX_TASKS];
 static volatile pid_t g_current_task_id = 0;
 static volatile pid_t g_highest_pid = 0;
 
+/**
+ * task_exit - The default exit point for a task.
+ *
+ * If a task function returns its RIP will land here. We mark the task as
+ * dead and then put the CPU to sleep in a loop. A real scheduler would clean up
+ * its resources (like the stack) here.
+ */
 static void task_exit(void) {
 	pr_debug("task %u ('%s') is exiting\n", g_current_task_id,
 		 g_task_table[g_current_task_id].name);
@@ -48,7 +55,8 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
 	u64 flags = local_irq_save();
 
 	pid_t new_pid = -1;
-	// TODO: Implement task slot reuse by searching for TASK_STATE_DEAD
+	// TODO: Right now we just increment PIDs. We should reuse slots from
+	// DEAD tasks.
 	if (g_highest_pid >= MAX_TASKS) {
 		pr_err("failed to create task '%s': max tasks reached\n", name);
 		local_irq_restore(flags);
@@ -75,10 +83,20 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
 	new_task->stack_base = (uintptr_t)stack;
 	uintptr_t stack_top = new_task->stack_base + PAGE_SIZE;
 
+	/**
+	 * We'll build a fake interrupt frame at the very top of the new task's
+	 * stack. This `pt_regs` struct is what the `iretq` instruction expects
+	 * to see when we "return" to this task.
+	 */
 	struct pt_regs *context =
 	    (struct pt_regs *)(stack_top - sizeof(struct pt_regs));
 	memset(context, 0, sizeof(struct pt_regs));
 
+	/*
+	 * We also need to push a "return address" onto the stack for the entry
+	 * function. If `entry_point` ever returns, it will "return" to
+	 * `task_exit`.
+	 */
 	uintptr_t task_entry_stack_top = (uintptr_t)context;
 	task_entry_stack_top -= 8;
 	*((u64 *)task_entry_stack_top) = (u64)task_exit;
@@ -89,7 +107,7 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
 	context->rsp = task_entry_stack_top;
 	context->ss = GDT_KERNEL_DATA_SELECTOR;
 
-	new_task->stack_pointer = (uintptr_t)context;
+	new_task->stack_ptr = (uintptr_t)context;
 	new_task->state = TASK_STATE_READY;
 
 	pr_info("created task '%s' with PID %u\n", name, new_pid);
@@ -98,13 +116,18 @@ pid_t create_task(const char *name, void (*entry_point)(void)) {
 	return new_pid;
 }
 
-uintptr_t schedule(uintptr_t current_stack_pointer) {
-	g_task_table[g_current_task_id].stack_pointer = current_stack_pointer;
+/**
+ * This is called from the timer interrupt handler. Its job is to save the
+ * current task's state and find the next task to run.
+ */
+uintptr_t schedule(uintptr_t current_stack_ptr) {
+	g_task_table[g_current_task_id].stack_ptr = current_stack_ptr;
 
 	if (g_task_table[g_current_task_id].state == TASK_STATE_RUNNING) {
 		g_task_table[g_current_task_id].state = TASK_STATE_READY;
 	}
 
+	/** Simple round-robin */
 	pid_t next_task_id = g_current_task_id;
 	for (int i = 0; i < g_highest_pid; i++) {
 		next_task_id = (next_task_id + 1) % g_highest_pid;
@@ -121,14 +144,11 @@ uintptr_t schedule(uintptr_t current_stack_pointer) {
 				 g_current_task_id,
 				 g_task_table[g_current_task_id].name);*/
 			// FUCKS UP THE CONSOLE SO I COMMENTED IT, BUT IT WORKS.
-			return g_task_table[g_current_task_id].stack_pointer;
+			return g_task_table[g_current_task_id].stack_ptr;
 		}
 	}
 
-	// If we get here it means no other task was ready.
-	// The current task (which we just set to READY) is the only option, so
-	// we continue running it. This happens frequently in the idle loop.
 	g_current_task_id = 0;
 	g_task_table[g_current_task_id].state = TASK_STATE_RUNNING;
-	return g_task_table[g_current_task_id].stack_pointer;
+	return g_task_table[g_current_task_id].stack_ptr;
 }

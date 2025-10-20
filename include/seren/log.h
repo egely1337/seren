@@ -5,6 +5,12 @@
 
 #include <seren/types.h>
 
+/**
+ * struct log_msg_header - Metadata prefixed to every message in the log buffer.
+ * @len: The length of the message text that follows this header.
+ * @level: The log level (e.g., LOGLEVEL_INFO, LOGLEVEL_ERR).
+ * @ts: Timestamp of when the message was recorded (in milliseconds).
+ */
 struct log_msg_header {
 	u16 len;
 	u8 level;
@@ -16,6 +22,8 @@ struct log_msg_header {
  * klog_write - Write a fully formatted message into kernel log buffer.
  * @level: The log level
  * @msg: The null-terminated message string
+ *
+ * This is the backend for `printk`.
  */
 int klog_write(int level, const char *msg);
 

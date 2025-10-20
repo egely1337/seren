@@ -44,7 +44,6 @@ volatile struct limine_memmap_request memmap_request = {
 // clang-format on
 
 static void do_initcalls(void) {
-	pr_info("Running initcalls...\n");
 	for (initcall_t *call = &__initcall_start; call < &__initcall_end;
 	     call++) {
 		int ret = (*call)();

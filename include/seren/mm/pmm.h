@@ -17,7 +17,7 @@
 
 /**
  * struct page - Abstract handle for a physical page frame
- * @pfn:    Page frame number
+ * @pfn: Page frame number
  */
 struct page {
 	u64 pfn;
@@ -51,25 +51,25 @@ static inline struct page *alloc_page(void) { return alloc_pages(0); }
 
 /**
  * free_page - Free a single physical page
- * @page:   Pointer to the `struct page` to be freed
+ * @page: Pointer to the `struct page` to be freed
  */
 static inline void free_page(struct page *page) { free_pages(page, 0); }
 
 /**
  * page_to_phys - Convert a `struct page` to its physical address
- * @page:   The page structure to convert.
+ * @page: The page structure to convert.
  */
 phys_addr_t page_to_phys(struct page *page);
 
 /**
  * phys_to_page - Convert a physical address to its `struct page`
- * @phys:   The physical memory address.
+ * @phys: The physical memory address.
  */
 struct page *phys_to_page(phys_addr_t phys);
 
 /**
  * virt_to_page - Convert a kernel virtual address to its `struct page`
- * @addr:   The kernel virtual address (from the HHDM)
+ * @addr: The kernel virtual address (from the HHDM)
  */
 static inline struct page *virt_to_page(void *addr) {
 	extern volatile struct limine_hhdm_request hhdm_request;
@@ -80,7 +80,7 @@ static inline struct page *virt_to_page(void *addr) {
 
 /**
  * page_to_virt - Convert a `struct page` to its kernel virtual address
- * @addr:   The page structure to convert
+ * @addr: The page structure to convert
  */
 static inline void *page_to_virt(struct page *page) {
 	extern volatile struct limine_hhdm_request hhdm_request;

@@ -22,23 +22,23 @@ typedef struct task {
 	task_state_t state;
 	const char *name;
 
-	uintptr_t stack_pointer;
+	uintptr_t stack_ptr;
 
 	uintptr_t stack_base;
 } task_t;
 
 /**
- * @brief Initializes scheduling
+ * sched_init - Initializes scheduling
  */
 void sched_init(void);
 
 /**
- * @brief Creates a new kernel task.
+ * create_task - Creates a new kernel task.
  */
 pid_t create_task(const char *name, void (*entry_point)(void));
 
 /**
- * @brief The main scheduler function, called by the timer interrupt.
+ * schedule - The main scheduler function, called by the timer interrupt.
  */
 uintptr_t schedule(uintptr_t);
 

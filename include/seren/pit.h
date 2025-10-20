@@ -10,17 +10,13 @@
 #define TIMER_FREQUENCY (u32)1193182
 
 /**
- * @brief Every millisecond cpu will fire this function.
- */
-void timer_handler(void);
-
-/**
- * @brief The function that initializes timer
+ * timer_init - The function that initializes timer
  */
 void timer_init(void);
 
 /**
- * @brief Gets the number of milliseconds since the timer was initialized.
+ * timer_get_uptime_ms - Gets the number of milliseconds since the timer was
+ * initialized.
  */
 u64 timer_get_uptime_ms(void);
 
