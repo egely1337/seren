@@ -23,18 +23,25 @@
 #include <nucleus/types.h>
 #include <pic.h>
 
-__attribute__((
-    used,
-    section(".limine_requests"))) volatile struct limine_framebuffer_request
-    framebuffer_request = {.id = LIMINE_FRAMEBUFFER_REQUEST, .revision = 0};
+// clang-format off
+__attribute__((used, section(".limine_requests")))
+volatile struct limine_framebuffer_request framebuffer_request = {
+	.id = LIMINE_FRAMEBUFFER_REQUEST,
+	.revision = 0
+};
 
-__attribute__((used,
-	       section(".limine_requests"))) volatile struct limine_hhdm_request
-    hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 0};
+__attribute__((used, section(".limine_requests")))
+volatile struct limine_hhdm_request hhdm_request = {
+	.id = LIMINE_HHDM_REQUEST,
+	.revision = 0
+};
 
-__attribute__((
-    used, section(".limine_requests"))) volatile struct limine_memmap_request
-    memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 0};
+__attribute__((used, section(".limine_requests")))
+volatile struct limine_memmap_request memmap_request = {
+	.id = LIMINE_MEMMAP_REQUEST,
+	.revision = 0
+};
+// clang-format on
 
 static void do_initcalls(void) {
 	pr_info("Running initcalls...\n");
@@ -73,15 +80,15 @@ void kmain(void) {
 	sched_init();
 	local_irq_enable();
 
-	pr_info(
-	    "Initialization sequence complete. You can now type. See you <3\n");
+	pr_info("Initialization sequence complete. You can now type. See you "
+		"<3\n");
 
 #ifdef SERENOS_TEST_BUILD
 	pr_notice("This is the test build!\n");
 #endif
 
-	create_task("task1", task1);
-	create_task("task2", task2);
+	// create_task("task1", task1);
+	// create_task("task2", task2);
 
 	for (;;) {
 		__asm__ volatile("hlt");

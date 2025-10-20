@@ -1,4 +1,4 @@
-obj-y += main.o panic.o printk.o
+obj-y += main.o panic.o printk.o log.o
 obj-y += irq/
 obj-y += mm/
 obj-y += sched/

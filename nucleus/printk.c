@@ -5,42 +5,91 @@
 
 #include <lib/format.h>
 #include <lib/stdarg.h>
+#include <lib/string.h>
+#include <nucleus/console.h>
+#include <nucleus/log.h>
 #include <nucleus/printk.h>
-#include <nucleus/tty/console.h>
+#include <nucleus/spinlock.h>
 #include <nucleus/types.h>
 
-#define PRINTK_BUFFER_SIZE     256
-#define KERNEL_LOG_BUFFER_SIZE (4 * 1024)
-#define KERN_DEFAULT_LOGLEVEL  4
+#define PRINTK_BUF_SIZE 512
 
-static char temp_printk_buffer[PRINTK_BUFFER_SIZE];
+static int console_loglevel = LOGLEVEL_DEBUG;
+static spinlock_t console_lock = SPIN_LOCK_UNLOCKED;
+static struct console *console_list = NULL;
 
-static int g_console_loglevel = 7;
+static int __parse_level(const char **fmt) {
+	const char *p = *fmt;
+
+	if (p[0] == '<' && p[1] >= '0' && p[1] <= '7' && p[2] == '>') {
+		int level = p[1] - '0';
+		*fmt = p + 3;
+		return level;
+	}
+
+	return LOGLEVEL_INFO;
+}
+
+static void __emit_to_consoles(int level, const char *msg) {
+	u64 flags;
+	struct console *con;
+
+	if (level > console_loglevel)
+		return;
+
+	spin_lock_irqsave(&console_lock, flags);
+
+	for (con = console_list; con; con = con->next) {
+		if (con->write)
+			con->write(msg, strlen(msg));
+	}
+
+	spin_unlock_irqrestore(&console_lock, flags);
+}
+
+int vprintk(const char *fmt, va_list args) {
+	static char buf[PRINTK_BUF_SIZE];
+	const char *fmt_body;
+	int level;
+	int len;
+
+	if (!fmt)
+		return 0;
+
+	fmt_body = fmt;
+	level = __parse_level(&fmt_body);
+
+	len = kvsnprintf(buf, PRINTK_BUF_SIZE, fmt_body, args);
+	if (len <= 0)
+		return len;
+
+	klog_write(level, buf);
+	__emit_to_consoles(level, buf);
+
+	return len;
+}
 
 int printk(const char *fmt, ...) {
 	va_list args;
-	const char *fmt_body = fmt;
-	int level = KERN_DEFAULT_LOGLEVEL;
-
-	if (fmt[0] == '<' && fmt[2] == '>') {
-		if (fmt[1] >= '0' && fmt[1] <= '7') {
-			level = fmt[1] - '0';
-			fmt_body = fmt + 3;
-		}
-	}
-
-	if (level > g_console_loglevel) {
-		return 0;
-	}
+	int ret;
 
 	va_start(args, fmt);
-	int count =
-	    kvsnprintf(temp_printk_buffer, PRINTK_BUFFER_SIZE, fmt_body, args);
+	ret = vprintk(fmt, args);
 	va_end(args);
 
-	if (count >= 0) {
-		console_log(level, temp_printk_buffer);
-	}
+	return ret;
+}
 
-	return count;
+void register_console(struct console *con) {
+	u64 flags;
+
+	if (!con || !con->write)
+		return;
+
+	spin_lock_irqsave(&console_lock, flags);
+
+	con->next = console_list;
+	console_list = con;
+
+	spin_unlock_irqrestore(&console_lock, flags);
 }

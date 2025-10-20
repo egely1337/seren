@@ -8,7 +8,9 @@
 #include <lib/format.h>
 #include <lib/string.h>
 #include <limine.h>
+#include <nucleus/console.h>
 #include <nucleus/init.h>
+#include <nucleus/printk.h>
 #include <nucleus/spinlock.h>
 #include <nucleus/tty/console.h>
 #include <nucleus/tty/font.h>
@@ -38,6 +40,24 @@ static unsigned int inter_char_spacing = 1;
 static unsigned int effective_char_cell_width = 0;
 
 static int console_initialized_flag = 0;
+
+static u32 level_colors[] = {
+    [LOGLEVEL_EMERG] = COLOR_BRIGHT_RED,
+    [LOGLEVEL_ALERT] = COLOR_BRIGHT_RED,
+    [LOGLEVEL_CRIT] = COLOR_BRIGHT_RED,
+    [LOGLEVEL_ERR] = COLOR_RED,
+    [LOGLEVEL_WARN] = COLOR_BRIGHT_YELLOW,
+    [LOGLEVEL_NOTICE] = COLOR_BRIGHT_GREEN,
+    [LOGLEVEL_INFO] = COLOR_LIGHT_GREY,
+    [LOGLEVEL_DEBUG] = COLOR_BRIGHT_BLUE,
+};
+
+static const char *level_names[] = {
+    [LOGLEVEL_EMERG] = "EMRG", [LOGLEVEL_ALERT] = "ALRT",
+    [LOGLEVEL_CRIT] = "CRIT",  [LOGLEVEL_ERR] = "ERR ",
+    [LOGLEVEL_WARN] = "WARN",  [LOGLEVEL_NOTICE] = "NOTE",
+    [LOGLEVEL_INFO] = "INFO",  [LOGLEVEL_DEBUG] = "DBG ",
+};
 
 static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
 				 u32 fg, u32 bg) {
@@ -175,6 +195,26 @@ static void __console_putchar(char c) {
 	}
 }
 
+static void tty_console_write(const char *buf, unsigned int len) {
+	u64 flags;
+
+	if (!CONSOLE_READY)
+		return;
+
+	spin_lock_irqsave(&console_lock, flags);
+
+	for (unsigned int i = 0; i < len; i++)
+		__console_putchar(buf[i]);
+
+	spin_unlock_irqrestore(&console_lock, flags);
+}
+
+static struct console tty_console = {
+    .name = "tty0",
+    .write = tty_console_write,
+    .next = NULL,
+};
+
 void console_init(void) {
 	if (unlikely(console_initialized_flag)) {
 		return;
@@ -232,6 +272,8 @@ void console_init(void) {
 
 	console_initialized_flag = 1;
 	console_clear();
+
+	register_console(&tty_console);
 }
 
 void console_clear(void) {
@@ -288,76 +330,48 @@ void console_reset_fg_color(void) {
 }
 
 void console_log(int level, const char *message) {
-	if (unlikely(!console_initialized_flag))
+	u64 flags;
+	u64 ts;
+	u64 sec, ms;
+	char time_buf[16];
+	const char *prefix;
+	u32 color;
+
+	if (!console_initialized_flag)
 		return;
 
-	u64 uptime_ms = timer_get_uptime_ms();
-	u64 seconds = uptime_ms / 1000;
-	u64 milliseconds = uptime_ms % 1000;
+	ts = timer_get_uptime_ms();
+	sec = ts / 1000;
+	ms = ts % 1000;
 
-	char time_buf[16];
+	ksnprintf(time_buf, sizeof(time_buf), "[%5lu.%03lu] ", sec, ms);
 
-	ksnprintf(time_buf, sizeof(time_buf), "[%5lu.%03lu] ", seconds,
-		  milliseconds);
+	prefix = (level >= 0 && level <= LOGLEVEL_DEBUG) ? level_names[level]
+							 : "INFO";
+	color = (level >= 0 && level <= LOGLEVEL_DEBUG)
+		    ? level_colors[level]
+		    : CONSOLE_DEFAULT_FG_COLOR;
 
-	const char *prefix_text = NULL;
-	u32 prefix_color = CONSOLE_DEFAULT_FG_COLOR;
-
-	switch (level) {
-	case 0:
-		prefix_text = "EMRG";
-		prefix_color = COLOR_BRIGHT_RED;
-		break;
-	case 1:
-		prefix_text = "ALRT";
-		prefix_color = COLOR_BRIGHT_RED;
-		break;
-	case 2:
-		prefix_text = "CRIT";
-		prefix_color = COLOR_BRIGHT_RED;
-		break;
-	case 3:
-		prefix_text = "ERR ";
-		prefix_color = COLOR_RED;
-		break;
-	case 4:
-		prefix_text = "WARN";
-		prefix_color = COLOR_BRIGHT_YELLOW;
-		break;
-	case 5:
-		prefix_text = "NOTE";
-		prefix_color = COLOR_BRIGHT_GREEN;
-		break;
-	case 7:
-		prefix_text = "DBG ";
-		prefix_color = COLOR_BRIGHT_BLUE;
-		break;
-	}
-
-	unsigned long flags;
 	spin_lock_irqsave(&console_lock, flags);
 
-	u32 original_color = current_fg_color;
+	u32 orig_color = current_fg_color;
+
 	current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
 	for (char *p = time_buf; *p; p++)
 		__console_putchar(*p);
 
-	if (prefix_text) {
-		__console_putchar('[');
-		current_fg_color = prefix_color;
-		for (const char *p = prefix_text; *p; p++)
-			__console_putchar(*p);
-		current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
-		__console_putchar(']');
-		__console_putchar(' ');
-	} else {
-		for (int i = 0; i < 7; i++)
-			__console_putchar(' ');
-	}
+	__console_putchar('[');
+	current_fg_color = color;
+	for (const char *p = prefix; *p; p++)
+		__console_putchar(*p);
+	current_fg_color = CONSOLE_DEFAULT_FG_COLOR;
+	__console_putchar(']');
+	__console_putchar(' ');
 
 	for (const char *p = message; *p; p++)
 		__console_putchar(*p);
 
-	current_fg_color = original_color;
+	current_fg_color = orig_color;
+
 	spin_unlock_irqrestore(&console_lock, flags);
 }

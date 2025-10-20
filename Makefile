@@ -107,7 +107,7 @@ $(OS_ISO): $(KERNEL_ELF) $(LIMINE_STAMP)
 
 run: $(OS_ISO) ## Build and run the OS in QEMU.
 	@echo "  RUN $(BUILD_DESC)	Booting with QEMU..."
-	$(Q)$(QEMU) $(QEMU_FLAGS) -cdrom $<
+	$(Q)$(QEMU) $(QEMU_FLAGS) -serial stdio -cdrom $<
 
 $(LIMINE_STAMP):
 	$(Q)$(MAKE) fetch-limine

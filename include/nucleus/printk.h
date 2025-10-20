@@ -14,6 +14,15 @@
 #define KERN_INFO   "<6>" /* Informational */
 #define KERN_DEBUG  "<7>" /* Debug-level messages */
 
+#define LOGLEVEL_EMERG	0
+#define LOGLEVEL_ALERT	1
+#define LOGLEVEL_CRIT	2
+#define LOGLEVEL_ERR	3
+#define LOGLEVEL_WARN	4
+#define LOGLEVEL_NOTICE 5
+#define LOGLEVEL_INFO	6
+#define LOGLEVEL_DEBUG	7
+
 #ifndef pr_fmt
 #define pr_fmt(fmt) fmt
 #endif

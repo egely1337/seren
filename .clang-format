@@ -3,4 +3,4 @@ UseTab: Always
 TabWidth: 8
 IndentWidth: 8
 AlignConsecutiveMacros:
-  Enabled: true
+        Enabled: true
