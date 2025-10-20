@@ -25,7 +25,7 @@ typedef struct kernel_font {
 	void *priv;
 } kernel_font_t;
 
-int font_init_psf(kernel_font_t *font, const void *data, size_t size);
+int psf_font_init(kernel_font_t *font, const void *data, size_t size);
 
 static inline int font_get_glyph(kernel_font_t *font, unsigned char c,
 				 font_glyph_t *out_glyph) {

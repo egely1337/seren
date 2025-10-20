@@ -51,7 +51,7 @@ static int psf_get_glyph(kernel_font_t *font, unsigned char c,
 	return __psf_get_glyph(font->priv, c, out_glyph);
 }
 
-int font_init_psf(kernel_font_t *font, const void *data, size_t size) {
+int psf_font_init(kernel_font_t *font, const void *data, size_t size) {
 	if (unlikely(!font || !data || size < sizeof(struct psf1_hdr)))
 		return -1;
 

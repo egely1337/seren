@@ -89,7 +89,7 @@ static int fbcon_init(struct vc_info *info) {
 
 	size_t psf_size =
 	    (size_t)(_binary_font_psf_end - _binary_font_psf_start);
-	if (font_init_psf(&font, _binary_font_psf_start, psf_size) != 0) {
+	if (psf_font_init(&font, _binary_font_psf_start, psf_size) != 0) {
 		return -1;
 	}
 

@@ -4,15 +4,15 @@
  */
 
 #include <io.h>
-#include <seren/printk.h>
 #include <pic.h>
+#include <seren/printk.h>
 
 #define ICW1_INIT	  0x10
 #define ICW1_ICW4_NEEDED  0x01
 #define PIC_OCW3_READ_ISR 0x0B
 #define ICW4_8086_MODE	  0x01
 
-void pic_remap_and_init(void) {
+void pic_init(void) {
 	// We need to send this both to the master and slave PICs.
 	// ICW1_ICW4_NEEDED tells them to expect an ICW4 command later.
 	outb(PIC1_COMMAND_PORT, ICW1_INIT | ICW1_ICW4_NEEDED);

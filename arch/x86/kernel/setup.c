@@ -7,9 +7,9 @@
 
 #include <asm/gdt.h>
 #include <idt.h>
+#include <pic.h>
 #include <seren/init.h>
 #include <seren/printk.h>
-#include <pic.h>
 
 void arch_init(void) {
 	pr_info("Initializing x86_64 architecture...\n");
@@ -21,7 +21,7 @@ void arch_init(void) {
 	idt_init();
 
 	pr_info("Initializing and remapping legacy PIC...\n");
-	pic_remap_and_init();
+	pic_init();
 
 	pr_info("x86_64 architecture initialization complete\n");
 }

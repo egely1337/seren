@@ -19,7 +19,7 @@
  * @brief Initializes and remaps the 8259 PICs.
  * All IRQs are initially masked after remapping.
  */
-void pic_remap_and_init(void);
+void pic_init(void);
 
 /**
  * @brief Sends an End-Of-Interrupt (EOI) signal to the PIC(s).
