@@ -1,40 +1,31 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef FONT_H
-#define FONT_H
+#ifndef _SEREN_FONT_H
+#define _SEREN_FONT_H
 
 #include <seren/stddef.h>
 #include <seren/types.h>
 
 typedef struct font_glyph {
-	const unsigned char *bitmap;
-	unsigned int width_px;
-	unsigned int height_px;
-	unsigned int bytes_per_row;
+	const u8 *bitmap;
+	unsigned int width;
+	unsigned int height;
+	unsigned int stride;
 } font_glyph_t;
 
 typedef struct kernel_font {
-	char name[64];
-	unsigned int char_cell_width_px;
-	unsigned int char_cell_height_px;
-	unsigned int num_glyphs;
+	char name[16];
+	unsigned int width;
+	unsigned int height;
+	unsigned int nr_glyphs;
 
 	int (*get_glyph)(struct kernel_font *font, unsigned char c,
 			 font_glyph_t *out_glyph);
 
-	void *font_private_data;
+	void *priv;
 } kernel_font_t;
 
-/**
- * @brief Initializes a kernel_font structure for an embedded PSF font.
- *
- * @param font Pointer to the kernel_font_t structure to initialize
- * @param psf_binary_start Pointer to the start of embedded PSF binary data
- * @param psf_binary_size Size of the embedded PSF binary data
- * @return 0 on success, -1 on error.
- */
-int font_init_psf(kernel_font_t *font, const void *psf_binary_start,
-		  size_t psf_binary_size);
+int font_init_psf(kernel_font_t *font, const void *data, size_t size);
 
 static inline int font_get_glyph(kernel_font_t *font, unsigned char c,
 				 font_glyph_t *out_glyph) {
@@ -43,12 +34,12 @@ static inline int font_get_glyph(kernel_font_t *font, unsigned char c,
 	return -1;
 }
 
-static inline unsigned int font_get_char_width(kernel_font_t *font) {
-	return font ? font->char_cell_width_px : 0;
+static inline unsigned int font_width(kernel_font_t *font) {
+	return font ? font->width : 0;
 }
 
-static inline unsigned int font_get_char_height(kernel_font_t *font) {
-	return font ? font->char_cell_height_px : 0;
+static inline unsigned int font_height(kernel_font_t *font) {
+	return font ? font->height : 0;
 }
 
-#endif // FONT_H
+#endif // _SEREN_FONT_H

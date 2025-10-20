@@ -90,22 +90,21 @@ static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
 	}
 
 	int screen_pixel_x_cell_start = char_cell_x * effective_char_cell_width;
-	int screen_pixel_y_cell_start =
-	    char_cell_y * font_get_char_height(&active_font);
+	int screen_pixel_y_cell_start = char_cell_y * font_height(&active_font);
 
-	for (unsigned int y_in_glyph = 0; y_in_glyph < glyph_info.height_px;
+	for (unsigned int y_in_glyph = 0; y_in_glyph < glyph_info.height;
 	     y_in_glyph++) {
-		for (unsigned int x_in_glyph = 0;
-		     x_in_glyph < glyph_info.width_px; x_in_glyph++) {
+		for (unsigned int x_in_glyph = 0; x_in_glyph < glyph_info.width;
+		     x_in_glyph++) {
 			unsigned int byte_idx_in_row = x_in_glyph / 8;
 			unsigned int bit_idx_in_byte = 7 - (x_in_glyph % 8);
 
-			if (byte_idx_in_row >= glyph_info.bytes_per_row)
+			if (byte_idx_in_row >= glyph_info.stride)
 				continue;
 
 			const unsigned char *row_data_ptr =
 			    glyph_info.bitmap +
-			    (y_in_glyph * glyph_info.bytes_per_row);
+			    (y_in_glyph * glyph_info.stride);
 
 			if ((row_data_ptr[byte_idx_in_row] >> bit_idx_in_byte) &
 			    1) {
@@ -121,7 +120,7 @@ static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
 			}
 		}
 
-		for (unsigned int x_space = glyph_info.width_px;
+		for (unsigned int x_space = glyph_info.width;
 		     x_space < effective_char_cell_width; x_space++) {
 			gfx_put_pixel(&active_gfx_device,
 				      screen_pixel_x_cell_start + x_space,
@@ -135,7 +134,7 @@ static void console_render_glyph(char c, int char_cell_x, int char_cell_y,
  * __console_scroll - Internal scroll worker. ASSUMES LOCK IS HELD.
  */
 static void __console_scroll(void) {
-	unsigned int char_height = font_get_char_height(&active_font);
+	unsigned int char_height = font_height(&active_font);
 	size_t line_size_bytes = active_gfx_device.pitch * char_height;
 	size_t scroll_size_bytes = line_size_bytes * (screen_rows - 1);
 
@@ -357,8 +356,8 @@ static int __init setup_console(void) {
 		return -1;
 	}
 
-	unsigned int f_width = font_get_char_width(&active_font);
-	unsigned int f_height = font_get_char_height(&active_font);
+	unsigned int f_width = font_width(&active_font);
+	unsigned int f_height = font_height(&active_font);
 
 	if (unlikely(f_width == 0 || f_height == 0)) {
 		return -1;
