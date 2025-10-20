@@ -9,13 +9,11 @@
 #include <seren/console.h>
 #include <seren/log.h>
 #include <seren/printk.h>
-#include <seren/spinlock.h>
 #include <seren/types.h>
 
 #define PRINTK_BUF_SIZE 512
 
 static int console_loglevel = LOGLEVEL_DEBUG;
-static spinlock_t console_lock = SPIN_LOCK_UNLOCKED;
 static struct console *console_list = NULL;
 
 static int __parse_level(const char **fmt) {
@@ -31,20 +29,15 @@ static int __parse_level(const char **fmt) {
 }
 
 static void __emit_to_consoles(int level, const char *msg) {
-	u64 flags;
 	struct console *con;
 
 	if (level > console_loglevel)
 		return;
 
-	spin_lock_irqsave(&console_lock, flags);
-
 	for (con = console_list; con; con = con->next) {
 		if (con->write)
 			con->write(msg, strlen(msg));
 	}
-
-	spin_unlock_irqrestore(&console_lock, flags);
 }
 
 int vprintk(const char *fmt, va_list args) {
@@ -81,15 +74,9 @@ int printk(const char *fmt, ...) {
 }
 
 void register_console(struct console *con) {
-	u64 flags;
-
 	if (!con || !con->write)
 		return;
 
-	spin_lock_irqsave(&console_lock, flags);
-
 	con->next = console_list;
 	console_list = con;
-
-	spin_unlock_irqrestore(&console_lock, flags);
 }

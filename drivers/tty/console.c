@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+/**
+ * Copyright (C) 2025 Arda Yetistiren
+ */
 
 #include <lib/format.h>
 #include <lib/string.h>
