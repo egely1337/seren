@@ -17,10 +17,6 @@ static irq_handler_t __irq_handlers[16] = {NULL};
 void do_irq(struct pt_regs *regs) {
 	u32 irq = regs->vector - PIC_IRQ_OFFSET_MASTER;
 
-	if (irq >= 8)
-		pic_send_eoi(8);
-	pic_send_eoi(irq);
-
 	if (irq == 7 && !(pic_read_isr() & (1 << 7))) {
 		pr_debug("spurious IRQ7 detected, ignoring\n");
 		return;
@@ -32,6 +28,11 @@ void do_irq(struct pt_regs *regs) {
 		__irq_handlers[irq](regs);
 	else
 		pr_warn("unhandled IRQ %u\n", irq);
+
+	if (irq >= 8) {
+		pic_send_eoi(8);
+	}
+	pic_send_eoi(irq);
 }
 
 int request_irq(u32 irq, irq_handler_t handler) {
