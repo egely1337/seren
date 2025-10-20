@@ -1,1 +1,0 @@
-obj-y += console.o psf_font.o

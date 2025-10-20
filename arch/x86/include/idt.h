@@ -3,7 +3,7 @@
 #ifndef IDT_H
 #define IDT_H
 
-#include <nucleus/types.h>
+#include <seren/types.h>
 
 typedef struct idt_entry {
 	u16 isr_low;

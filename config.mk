@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2025 Arda Yetistiren
 
-KERNEL_NAME	:= nucleus
+KERNEL_NAME	:= seren
 
 SUBARCH		?= $(shell uname -m)
 ARCH		:= $(SUBARCH)

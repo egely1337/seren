@@ -3,7 +3,7 @@
 #ifndef DRIVERS_PIC_H
 #define DRIVERS_PIC_H
 
-#include <nucleus/types.h>
+#include <seren/types.h>
 
 #define PIC1_COMMAND_PORT 0x20
 #define PIC1_DATA_PORT	  0x21

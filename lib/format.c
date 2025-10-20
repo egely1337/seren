@@ -5,7 +5,7 @@
 
 #include <lib/format.h>
 #include <lib/stdarg.h>
-#include <nucleus/types.h>
+#include <seren/types.h>
 
 char *itoa_k(long long value, char *str, int base, int is_signed, int min_width,
 	     char pad_char) {

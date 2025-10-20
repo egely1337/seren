@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-#include <nucleus/types.h>
+#include <seren/types.h>
 
 /* Misc */
 

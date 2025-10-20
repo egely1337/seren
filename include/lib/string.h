@@ -3,8 +3,8 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include <nucleus/stddef.h>
-#include <nucleus/types.h>
+#include <seren/stddef.h>
+#include <seren/types.h>
 
 /**
  * @brief Calculates the length of a null-terminated string.

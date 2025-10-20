@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#include <nucleus/printk.h>
+#include <seren/printk.h>
 
 #ifndef X86_64_PORT_IO_H
 #define X86_64_PORT_IO_H
 
-#include <nucleus/types.h>
+#include <seren/types.h>
 
 static inline void outb(u16 port, u8 value) {
 	__asm__ volatile("outb %0, %1" : : "a"(value), "Nd"(port));

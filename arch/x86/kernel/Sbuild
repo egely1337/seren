@@ -1,0 +1,2 @@
+obj-y += gdt_flush.o gdt.o idt_entries.o idt.o
+obj-y += irq.o pic.o pit.o setup.o traps.o

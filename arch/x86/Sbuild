@@ -1,3 +1,2 @@
-obj-y += core/
+obj-y += kernel/
 obj-y += boot/
-obj-y += drivers/

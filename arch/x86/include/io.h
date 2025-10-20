@@ -3,7 +3,7 @@
 #ifndef KERNEL_IO_H
 #define KERNEL_IO_H
 
-#include <nucleus/types.h>
+#include <seren/types.h>
 
 /**
  * @brief Writes a byte to the specified I/O port.

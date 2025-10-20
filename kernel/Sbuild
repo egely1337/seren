@@ -1,0 +1,3 @@
+obj-y += panic.o printk.o log.o
+obj-y += irq/
+obj-y += sched/

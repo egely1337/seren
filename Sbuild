@@ -1,5 +1,8 @@
 obj-y += lib/
-obj-y += nucleus/
+obj-y += kernel/
+obj-y += fs/
 obj-y += drivers/
 obj-y += arch/$(SRCARCH)/
-obj-y += resources/
+obj-y += data/
+obj-y += mm/
+obj-y += init/

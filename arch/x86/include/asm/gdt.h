@@ -3,8 +3,8 @@
 #ifndef _ASM_X86_64_GDT_H
 #define _ASM_X86_64_GDT_H
 
-#include <nucleus/mm/pmm.h>
-#include <nucleus/types.h>
+#include <seren/mm/pmm.h>
+#include <seren/types.h>
 
 #define GDT_KERNEL_CODE_SELECTOR 0x08
 #define GDT_KERNEL_DATA_SELECTOR 0x10

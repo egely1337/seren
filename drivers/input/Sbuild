@@ -1,1 +1,1 @@
-obj-y += keyboard.o
+obj-y += ps2.o

@@ -3,7 +3,7 @@
  * Copyright (C) 2025 Arda Yetistiren
  */
 
-/* Alright, this is the blueprint for our Nucleus Kernel's memory layout.
+/* Alright, this is the blueprint for our kernel's memory layout.
    We're making a 64-bit ELF executable that's gonna live in the "higher-half" of memory.
    This script tells the linker where to put all the pieces, like code and data,
    and makes sure Limine can boot it up nicely. */
