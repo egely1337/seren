@@ -85,8 +85,8 @@ void kmain(void) {
 	pr_notice("This is the test build!\n");
 #endif
 
-	// create_task("task1", task1);
-	// create_task("task2", task2);
+	create_task("task1", task1);
+	create_task("task2", task2);
 
 	for (;;) {
 		__asm__ volatile("hlt");

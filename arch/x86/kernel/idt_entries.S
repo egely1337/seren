@@ -3,135 +3,95 @@
  * Copyright (C) 2025 Arda Yetistiren
  */
 
-.intel_syntax noprefix
+#include <asm/irq_vectors.h>
 
-#define ISR_NO_ERR_CODE(vector_num)	\
-	.global isr##vector_num;	\
-	isr##vector_num:		\
-	cli;				\
-	push 0;				\
-	jmp common_isr_stub
+.macro idt_entry name, vector, has_err=0
+.global \name
+.align 8
+\name:
+    .if \has_err == 0
+        pushq $0
+    .endif
 
-#define ISR_ERR_CODE(vector_num)	\
-	.global isr##vector_num;	\
-	isr##vector_num:		\
-	cli;				\
-	push vector_num;		\
-	jmp common_isr_stub
+    pushq $\vector
 
-#define IRQ_HANDLER_STUB(name, irq_num)	\
-	.global irq_stub_##name;	\
-	irq_stub_##name:		\
-	cli;				\
-	push 0;				\
-	push (32 + irq_num);		\
-	jmp common_irq_dispatcher_stub
-
-.section .text
-
-common_isr_stub:
-	push rax; push rcx; push rdx; push rbx
-	push rbp; push rsi; push rdi
-	push r8;  push r9;  push r10; push r11
-	push r12; push r13; push r14; push r15
-	
-	mov rdi, rsp
-	call exception_handler
-	
-	pop r15; pop r14; pop r13; pop r12
-	pop r11; pop r10; pop r9;  pop r8
-	pop rdi; pop rsi; pop rbp; pop rbx
-	pop rdx; pop rcx; pop rax
-	
-	add rsp, 16
-	sti
-	iretq
+    jmp common_interrupt_handler
+.endm
 
 
-common_irq_dispatcher_stub:
-	push rax; push rcx; push rdx; push rbx
-	push rbp; push rsi; push rdi
-	push r8;  push r9;  push r10; push r11
-	push r12; push r13; push r14; push r15
-	
-	mov rdi, rsp
-	call do_irq
-	
-	pop r15; pop r14; pop r13; pop r12
-	pop r11; pop r10; pop r9;  pop r8
-	pop rdi; pop rsi; pop rbp; pop rbx
-	pop rdx; pop rcx; pop rax
-	
-	add rsp, 16
-	sti
-	iretq
-
-.global irq_stub_0
-irq_stub_0:
+.global common_interrupt_handler
+common_interrupt_handler:
 	cli
-	push 0
-	push 32
-	
-	push rax; push rcx; push rdx; push rbx
-	push rbp; push rsi; push rdi
-	push r8;  push r9;  push r10; push r11
-	push r12; push r13; push r14; push r15
-	
-	mov rdi, rsp
-	call do_irq
-	
-	mov rdi, rsp
+
+	pushq %rdi; pushq %rsi; pushq %rdx; pushq %rcx;
+	pushq %rax; pushq %r8;  pushq %r9;  pushq %r10;
+	pushq %r11;
+
+	pushq %rbx; pushq %rbp; pushq %r12; pushq %r13;
+    	pushq %r14; pushq %r15;
+
+	movq %rsp, %rdi
+    	call handle_interrupt
+
+	// If the rax is 0, no reschedule is needed
+	testq %rax, %rax
+	je .no_reschedule
+
+	movq %rsp, %rdi
 	call schedule
-	mov rsp, rax # CONTEXT SWITCH
-	
-	pop r15; pop r14; pop r13; pop r12
-	pop r11; pop r10; pop r9;  pop r8
-	pop rdi; pop rsi; pop rbp; pop rbx
-	pop rdx; pop rcx; pop rax
-	
-	add rsp, 16
+	movq %rax, %rsp // CONTEXT SWITCH
+
+.no_reschedule:
+	popq %r15; popq %r14; popq %r13; popq %r12;
+    	popq %rbp; popq %rbx;
+    	popq %r11; popq %r10; popq %r9;  popq %r8;
+    	popq %rax; popq %rcx; popq %rdx; popq %rsi;
+    	popq %rdi;
+
+	addq $16, %rsp
 	sti
 	iretq
 
-ISR_NO_ERR_CODE(0)
-ISR_NO_ERR_CODE(1)
-ISR_NO_ERR_CODE(2)
-ISR_NO_ERR_CODE(3)
-ISR_NO_ERR_CODE(4)
-ISR_NO_ERR_CODE(5)
-ISR_NO_ERR_CODE(6)
-ISR_NO_ERR_CODE(7)
-ISR_ERR_CODE(8)
-ISR_NO_ERR_CODE(9)
-ISR_ERR_CODE(10)
-ISR_ERR_CODE(11)
-ISR_ERR_CODE(12)
-ISR_ERR_CODE(13)
-ISR_ERR_CODE(14)
-# ISR 15 is reserved by Intel.
-ISR_NO_ERR_CODE(16)
-ISR_ERR_CODE(17)
-ISR_NO_ERR_CODE(18)
-ISR_NO_ERR_CODE(19)
-ISR_NO_ERR_CODE(20)
+idt_entry isr0,  DIVIDE_ERROR_VECTOR
+idt_entry isr1,  DEBUG_VECTOR
+idt_entry isr2,  NMI_VECTOR
+idt_entry isr3,  BREAKPOINT_VECTOR
+idt_entry isr4,  OVERFLOW_VECTOR
+idt_entry isr5,  BOUNDS_CHECK_VECTOR
+idt_entry isr6,  INVALID_OPCODE_VECTOR
+idt_entry isr7,  DEVICE_NOT_AVAILABLE_VECTOR
+idt_entry isr8,  DOUBLE_FAULT_VECTOR, has_err=1
+idt_entry isr9,  COPROCESSOR_SEGMENT_OVERRUN_VECTOR
+idt_entry isr10, INVALID_TSS_VECTOR, has_err=1
+idt_entry isr11, SEGMENT_NOT_PRESENT_VECTOR, has_err=1
+idt_entry isr12, STACK_FAULT_VECTOR, has_err=1
+idt_entry isr13, GENERAL_PROTECTION_FAULT_VECTOR, has_err=1
+idt_entry isr14, PAGE_FAULT_VECTOR, has_err=1
+// Vector 15 is reserved
+idt_entry isr16, X87_FPU_VECTOR
+idt_entry isr17, ALIGNMENT_CHECK_VECTOR, has_err=1
+idt_entry isr18, MACHINE_CHECK_VECTOR
+idt_entry isr19, SIMD_FP_VECTOR
+idt_entry isr20, VIRTUALIZATION_VECTOR
 
-IRQ_HANDLER_STUB(1, 1)   # Keyboard
-IRQ_HANDLER_STUB(2, 2)   # Cascade for Slave PIC
-IRQ_HANDLER_STUB(3, 3)   # COM2
-IRQ_HANDLER_STUB(4, 4)   # COM1
-IRQ_HANDLER_STUB(5, 5)   # LPT2
-IRQ_HANDLER_STUB(6, 6)   # Floppy
-IRQ_HANDLER_STUB(7, 7)   # LPT1 / Spurious
-IRQ_HANDLER_STUB(8, 8)   # RTC
-IRQ_HANDLER_STUB(9, 9)   # Free / ACPI
-IRQ_HANDLER_STUB(10, 10)  # Free
-IRQ_HANDLER_STUB(11, 11)  # Free
-IRQ_HANDLER_STUB(12, 12)  # PS/2 Mouse
-IRQ_HANDLER_STUB(13, 13)  # FPU
-IRQ_HANDLER_STUB(14, 14)  # Primary ATA
-IRQ_HANDLER_STUB(15, 15)  # Secondary ATA
+idt_entry irq_stub_0,  PIC1_START_VECTOR
+idt_entry irq_stub_1,  PIC1_START_VECTOR + 1
+idt_entry irq_stub_2,  PIC1_START_VECTOR + 2
+idt_entry irq_stub_3,  PIC1_START_VECTOR + 3
+idt_entry irq_stub_4,  PIC1_START_VECTOR + 4
+idt_entry irq_stub_5,  PIC1_START_VECTOR + 5
+idt_entry irq_stub_6,  PIC1_START_VECTOR + 6
+idt_entry irq_stub_7,  PIC1_START_VECTOR + 7
+idt_entry irq_stub_8,  PIC2_START_VECTOR
+idt_entry irq_stub_9,  PIC2_START_VECTOR + 1
+idt_entry irq_stub_10, PIC2_START_VECTOR + 2
+idt_entry irq_stub_11, PIC2_START_VECTOR + 3
+idt_entry irq_stub_12, PIC2_START_VECTOR + 4
+idt_entry irq_stub_13, PIC2_START_VECTOR + 5
+idt_entry irq_stub_14, PIC2_START_VECTOR + 6
+idt_entry irq_stub_15, PIC2_START_VECTOR + 7
 
 .global idt_load
 idt_load:
-	lidt [rdi]
+	lidt (%rdi)
 	ret
