@@ -5,10 +5,37 @@
 #include <seren/init.h>
 #include <seren/mm.h>
 #include <seren/list.h>
-
+#include <seren/fs/vfs.h>
 
 /* Root device */
 struct device * devicefs_root = NULL;
+
+/* Filesystem device */
+struct filesystem device_filesystem = {
+    .name = "(device filesystem)",
+    .ops = {
+        
+    }
+};
+
+struct device *__devicefs_add(const char* name, void* device, device_read_op read, device_write_op write) {
+    struct device* dev = (struct device*)kmalloc(sizeof(struct device));
+    
+    /* Check allocation error */
+    if(!dev) {
+        pr_emerg("failed to allocate new device. potantially out of memory.\n");
+        return NULL;
+    }
+
+    /* Initialize new devicefs */
+    dev->devptr = device;
+    dev->name = (char*)name;
+    dev->ops.read = read;
+    dev->ops.write = write;
+    list_add(&dev->dev_list, &devicefs_root->dev_list);
+    
+    return dev;
+}
 
 /**
  * @brief Initializes devicefs
@@ -45,7 +72,9 @@ int devicefs_init(void) {
  * @param read Address of the read operation
  * @param write Address of the write operation
  */
-void devicefs_add(const char* name, const void* device, device_read_op read, device_write_op write);
+struct device *devicefs_add(const char* name, void* device, device_read_op read, device_write_op write) {
+    return __devicefs_add(name, device, read, write);
+}
 
 
 static int __init devicefs_setup() {

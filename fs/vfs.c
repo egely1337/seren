@@ -46,6 +46,21 @@ bool __str_backspace(char *str, char c) {
 	return false;
 }
 
+u8 __check_is_mounted(const char* path) {
+	struct mount_info* mp;
+	
+	for(volatile size_t i = 0; i < mounted; ++i) {
+		mp = mount_points[i];
+		
+		if(mp) {
+			if(strcmp(path, mp->mount_point) == 0)
+				return 0;
+		}
+	}
+
+	return 1;
+}
+
 u8 __find_mount(char *filename, int *adjust) {
 	char *orig = (char *)kmalloc(strlen(filename) + 1);
 	memset(orig, 0, strlen(filename) + 1);
@@ -72,31 +87,53 @@ u8 __find_mount(char *filename, int *adjust) {
 }
 
 void vfs_mount_root(struct filesystem *rootfs) {
-	if (rootfs == NULL) {
-		pr_emerg("Provided rootfs is NULL.\n");
+	
+	/* Check provided filesystem */
+	if (NULL == rootfs || 
+		NULL != mount_points ||
+		mounted > 0
+	) {
+		goto fail;
 	}
 
-	if (mount_points != NULL) {
-		pr_crit("VFS is not initialized.\n");
-	}
-
+	/* Make our Root Filesystem to provided filesystem. */
 	vfs_root = rootfs;
-	if (mounted != 0) {
-		goto already_mounted;
-	}
 
-	/* Initialize RootFS */
-	struct mount_info *root = mount_points[0];
+	/* Initialize RootFS at mount_points */
+	struct mount_info *root = mount_points[mounted];
 	root->mount_point = "/";
 	root->fs = rootfs;
+	mounted++;
 
-already_mounted:
-	pr_crit("Root may be already mounted.\n");
+fail:
+	pr_emerg("Mount root failed, check vfs_mount_root() parameters.\n");
+	return;
+}
+
+int vfs_mount(const char* path, struct filesystem* fs) {
+	if(unlikely(__check_is_mounted(path) == VFS_FAIL)) {
+		pr_emerg("Some fs already mounted to this path: %s\n", path);
+		return VFS_FAIL;
+	}
+	
+	/* Allocate new mount point */
+	struct mount_info* new_mount_info = mount_points[mounted];
+	new_mount_info = (struct mount_info*)kmalloc(sizeof(struct mount_info));
+
+	/* Allocation failed, Check errors */
+	if(!new_mount_info) {
+		pr_emerg("Out of memory to allocate new mount point.\n");
+		return VFS_FAIL;
+	}
+
+	/* Setup new mount point */
+	new_mount_info->fs = fs;
+	new_mount_info->mount_point = (char*)path;
+	return VFS_SUCCESS;
 }
 
 static int __init setup_vfs(void) {
 	vfs_init();
-
 	return 0;
 }
 

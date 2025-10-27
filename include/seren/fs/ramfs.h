@@ -3,11 +3,15 @@
 #ifndef _RAMFS_
 #define _RAMFS_
 
-#include <lib/string.h>
 #include <seren/fs/devicefs.h>
+#include <lib/string.h>
 #include <seren/types.h>
 
 typedef enum { SEEK_SET, SEEK_START, SEEK_END } ramfs_seek_t;
+
+/**
+ * @brief Our device descriptor
+ */
 struct ramfs {
 	void *buf;
 	size_t len;
@@ -17,16 +21,16 @@ struct ramfs {
 /**
  * @brief Initializes RamFS
  */
-struct ramfs *ramfs_init(void);
+struct device *ramfs_init(void);
 
 /**
  * @brief Read from RamFS
  */
-void ramfs_read(struct ramfs *ramfs, const void *buf, size_t len);
+int ramfs_read(struct device *dev, const void *buf, size_t len);
 
 /**
  * @brief Seek RamFS file
  */
-void ramfs_seek(struct ramfs *ramfs, ramfs_seek_t type, size_t size);
+int ramfs_write(struct device *dev, size_t size);
 
 #endif

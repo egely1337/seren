@@ -6,16 +6,12 @@
 #include <seren/list.h>
 
 struct device;
-typedef void (*device_close_op)(const char *);
-typedef void (*device_read_op)(const char *);
-typedef void (*device_write_op)(const char *, struct device *, const void *);
-typedef void (*device_touch_op)(const char *, struct device *, const void *);
-typedef void (*device_mount_op)(struct device *);
-typedef void (*device_probe_op)(struct device *);
+typedef void (*device_read_op)	(struct device*, const char*);
+typedef void (*device_write_op)	(struct device*, const char*);
 
 struct device {
-	char *name;
-	void* devptr;
+	char 	*name;
+	void 	*devptr;
 	struct {
 		device_read_op read;
 		device_write_op write;
@@ -35,6 +31,14 @@ int devicefs_init(void);
  * @param read Address of the read operation
  * @param write Address of the write operation
  */
-void devicefs_add(const char* name, const void* device, device_read_op read, device_write_op write);
+struct device* devicefs_add(const char* name, void* device, device_read_op read, device_write_op write);
+
+/**
+ * @brief Device read
+ * @param path Device path
+ * @param buf Buffer
+ * @param count Count
+ */
+void devicefs_read(const char* path, const void* buf, size_t count); 
 
 #endif
