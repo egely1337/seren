@@ -1,2 +1,2 @@
-obj-y += vfs.o ramfs.o
+obj-y += vfs.o ramfs.o devicefs.o
 obj-y += ext2/
