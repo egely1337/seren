@@ -8,3 +8,4 @@
 .idea
 compile_commands.json
 .cache
+limine_files/
