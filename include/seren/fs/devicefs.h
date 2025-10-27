@@ -26,7 +26,7 @@ struct device {
 /**
  * @brief Initializes devicefs
  */
-void devicefs_init(void);
+int devicefs_init(void);
 
 /**
  * @brief Adds device to devicefs

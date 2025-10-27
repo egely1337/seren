@@ -13,7 +13,7 @@
 
 #define MAX_MOUNTS (int)32
 
-struct filesystem *root = NULL;
+struct filesystem *vfs_root = NULL;
 struct mount_info **mount_points = NULL;
 size_t mounted = 0;
 
@@ -80,7 +80,7 @@ void vfs_mount_root(struct filesystem *rootfs) {
 		pr_crit("VFS is not initialized.\n");
 	}
 
-	root = rootfs;
+	vfs_root = rootfs;
 	if (mounted != 0) {
 		goto already_mounted;
 	}
